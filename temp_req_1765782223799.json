@@ -1,0 +1,1 @@
+{"contents":[{"parts":[{"text":"\n    Answer the following question in clear bullet points.\n    Return ONLY JSON.\n    \n    Question: Explain AI\n    \n    JSON format:\n    {\n      \"title\": \"Short topic title\",\n      \"points\": [\"point 1\", \"point 2\", \"point 3\"]\n    }\n    "}]}]}
