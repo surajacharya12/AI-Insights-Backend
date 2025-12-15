@@ -1,77 +1,71 @@
 import express from 'express';
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import db from '../config/db.js';
+import { quizHistoryTable } from '../config/schema.js';
+import { eq } from "drizzle-orm";
 
 const router = express.Router();
+const MODELS_TO_TRY = ['gemini-flash-latest'];
 
-const MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-pro"];
-
+// Generate quiz
 router.post('/', async (req, res) => {
-    try {
-        const { topic } = req.body;
+    const { topic, numQuestions = 5 } = req.body;
+    if (!topic) return res.status(400).json({ error: 'Topic is required' });
 
-        if (!topic) {
-            return res.status(400).json({ error: "Topic is required" });
-        }
+    const apiKey = process.env.GEMINI_API_KEY_QUIZ;
+    if (!apiKey) return res.status(500).json({ error: 'API key missing' });
 
-        const apiKey = process.env.GEMINI_API || process.env.GEMINI_API_KEY;
-        if (!apiKey) {
-            console.error("❌ GEMINI_API or GEMINI_API_KEY is missing!");
-            return res.status(500).json({ error: "Server configuration error" });
-        }
-
-        const genAI = new GoogleGenerativeAI(apiKey);
-
-        const prompt = `Generate a quiz with 5 multiple-choice questions about the topic: "${topic}".
-Each question should be a JSON object like this:
-{
-  "question": "Your question?",
-  "options": ["A", "B", "C", "D"],
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const prompt = `Generate a quiz with exactly ${numQuestions} multiple-choice questions about "${topic}" in JSON format:
+[{
+  "question": "Question?",
+  "options": ["A","B","C","D"],
   "answer": "Correct answer"
-}
-Return an array of 5 such question objects in valid JSON format.
-Do not include any markdown or code fences (like \`\`\`json) in the response. Return only the pure JSON.`;
+}]
+Return pure JSON only. No markdown, no code fences.`;
 
-        let lastError = null;
+    let lastError = null;
 
-        for (const modelName of MODELS_TO_TRY) {
-            try {
-                console.log(`🤖 Generating quiz with model: ${modelName}`);
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    safetySettings: [
-                        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                    ]
-                });
-
-                const result = await model.generateContent(prompt);
-                const responseText = result.response.text();
-
-                // Clean up potential markdown
-                const cleanedText = responseText.replace(/```json|```/g, "").trim();
-
-                // Validate JSON
-                JSON.parse(cleanedText);
-
-                return res.json({ quiz: cleanedText });
-
-            } catch (error) {
-                console.warn(`⚠️ Model ${modelName} failed:`, error.message);
-                lastError = error;
-
-                if (error.status === 429 || (error.message && error.message.includes("429"))) {
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
-            }
+    for (const modelName of MODELS_TO_TRY) {
+        try {
+            const model = genAI.getGenerativeModel({ model: modelName });
+            const result = await model.generateContent(prompt);
+            const responseText = await result.response.text();
+            const cleaned = responseText.replace(/```json|```/g, '').trim();
+            const quizJSON = JSON.parse(cleaned);
+            return res.json({ quiz: cleaned });
+        } catch (err) {
+            console.warn(`Model ${modelName} failed:`, err.message);
+            lastError = err;
         }
+    }
 
-        throw lastError || new Error("All models failed to generate quiz.");
+    return res.status(500).json({ error: lastError?.message || 'Failed to generate quiz' });
+});
 
+// Save quiz result
+router.post('/save-result', async (req, res) => {
+    try {
+        const { userEmail, topic, score, totalQuestions, date } = req.body;
+        if (!userEmail || !topic) return res.status(400).json({ error: 'Missing fields' });
+
+        const result = await db.insert(quizHistoryTable).values({ userEmail, topic, score, totalQuestions, date }).returning();
+        res.json({ success: true, result: result[0] });
     } catch (error) {
-        console.error("Error generating quiz:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        console.error(error);
+        res.status(500).json({ error: 'Failed to save quiz result' });
+    }
+});
+
+// Get quiz history
+router.get('/history/:email', async (req, res) => {
+    try {
+        const { email } = req.params;
+        const history = await db.select().from(quizHistoryTable).where(eq(quizHistoryTable.userEmail, email));
+        res.json({ history });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to fetch history' });
     }
 });
 

@@ -2,7 +2,7 @@ import express from "express";
 
 const router = express.Router();
 
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY_THINK_BOT}`;
 
 // POST /api/chat
 router.post("/chat", async (req, res) => {

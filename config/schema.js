@@ -37,3 +37,14 @@ export const enrollmentsTable = pgTable("enrollments", {
     .references(() => usersTable.email),
   completedChapters: json("completedChapters"),
 });
+
+export const quizHistoryTable = pgTable("quiz_history", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userEmail: varchar("userEmail")
+    .notNull()
+    .references(() => usersTable.email),
+  topic: varchar("topic").notNull(),
+  score: integer("score").notNull(),
+  totalQuestions: integer("totalQuestions").notNull(),
+  date: varchar("date").notNull(),
+});

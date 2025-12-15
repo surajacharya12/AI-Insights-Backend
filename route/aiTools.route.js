@@ -4,7 +4,7 @@ import axios from "axios";
 
 const router = express.Router();
 const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API,
+  apiKey: process.env.GEMINI_API_IMAGE,
 });
 
 /* =====================================================
