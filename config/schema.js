@@ -48,3 +48,17 @@ export const quizHistoryTable = pgTable("quiz_history", {
   totalQuestions: integer("totalQuestions").notNull(),
   date: varchar("date").notNull(),
 });
+
+// User PDFs Table for Chat with PDF feature
+export const userPdfsTable = pgTable("user_pdfs", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  userEmail: varchar("userEmail")
+    .notNull()
+    .references(() => usersTable.email),
+  fileName: varchar("fileName").notNull(),
+  geminiFileName: varchar("geminiFileName").notNull(), // Gemini file.name for deletion
+  geminiFileUri: varchar("geminiFileUri").notNull(), // Gemini file.uri for content generation
+  geminiMimeType: varchar("geminiMimeType").notNull(),
+  uploadedAt: varchar("uploadedAt").notNull(),
+});
+
