@@ -1,19 +1,39 @@
 import express from "express";
+import crypto from "crypto";
+import fetch from "node-fetch";
+import { GoogleGenAI } from "@google/genai";
 import db from "../config/db.js";
 import { coursesTable } from "../config/schema.js";
-import { GoogleGenAI, Modality } from "@google/genai";
-import crypto from "crypto";
 
 const router = express.Router();
 
-const PROMPT = `Generate a Learning Course based on the following details.
+/* =====================================================
+   GEMINI INIT (TEXT ONLY)
+===================================================== */
+const ai = new GoogleGenAI({
+    apiKey: process.env.GEMINI_API_COURSE,
+});
 
-IMPORTANT INSTRUCTIONS:
-1. **Description**: Generate a NEW, comprehensive, and engaging description for the course. Do NOT just copy the user's input description. It should be suitable for a course landing page.
-2. **Chapters & Topics**: Generate detailed and relevant chapters and topics. Do NOT simply repeat the course name or category. Ensure the content is educational and structured logically.
-3. **Banner Image**: Create a prompt for a modern, flat-style 2D digital illustration with UI/UX elements, icons, mockups, text blocks, sticky notes, charts, and a 3D look using a vibrant color palette.
+/* =====================================================
+   COURSE PROMPT
+===================================================== */
+const COURSE_PROMPT = `
+Generate Learning Course based on user input.
 
-The response should be strictly valid JSON matching this structure:
+Include:
+- Course Name
+- Description
+- Category
+- Level
+- Duration
+- Include Video (boolean)
+- Number of Chapters
+- Course Banner Image Prompt
+- Chapters with topics
+
+Return ONLY valid JSON.
+
+Schema:
 {
   "course": {
     "name": "string",
@@ -32,181 +52,104 @@ The response should be strictly valid JSON matching this structure:
       }
     ]
   }
-}`;
+}
+`;
 
-const TEXT_MODELS_TO_TRY = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"];
-const IMAGE_MODELS_TO_TRY = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-flash-latest"]; // Image generation models
-
-async function GenerateImageWithGemini(prompt) {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_API;
-    if (!apiKey) {
-        throw new Error("Gemini API key is missing. Set GEMINI_API_KEY or GEMINI_API in .env");
+/* =====================================================
+   HELPERS
+===================================================== */
+function extractJSON(text) {
+    const start = text.indexOf("{");
+    const end = text.lastIndexOf("}");
+    if (start === -1 || end === -1) {
+        throw new Error("Invalid JSON from AI");
     }
-    const ai = new GoogleGenAI({ apiKey });
-
-    // Try primary image model
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.0-flash-exp", // Using a model known for image gen capabilities if available, or the one user had
-            contents: prompt,
-            config: {
-                responseModalities: [Modality.IMAGE, Modality.TEXT],
-                image: { width: 1024, height: 1024 },
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                ],
-            },
-        });
-        const imagePart = response.candidates?.[0]?.content?.parts.find(
-            (part) => part.inlineData?.data
-        );
-        if (imagePart) return imagePart.inlineData.data;
-    } catch (e) {
-        console.warn("Primary image model failed:", e.message);
-    }
-
-    throw new Error("Image generation failed.");
+    return text.slice(start, end + 1);
 }
 
-function getFallbackCourse(formData) {
-    const noOfChapters = Number(formData.noOfChapters) || 3;
-    return {
-        course: {
-            name: formData.name || "Generated Course",
-            description: formData.description || "Course description unavailable.",
-            category: formData.category || "General",
-            level: formData.level || "Beginner",
-            duration: "1 Hour",
-            includeVideo: formData.includeVideo === 'true' || formData.includeVideo === true,
-            noOfChapters: noOfChapters,
-            bannerImagePrompt: "Educational course banner",
-            chapters: Array.from({ length: noOfChapters }, (_, i) => ({
-                chapterName: `Chapter ${i + 1}: Introduction`,
-                duration: "10 min",
-                topics: ["Overview", "Key Concepts", "Summary"]
-            }))
-        }
-    };
-}
+/* =====================================================
+   FETCH BANNER FROM PEXELS (FREE)
+===================================================== */
+async function fetchCourseBanner(course) {
+    const query = `${course.name} ${course.category} ${course.level}`;
 
-async function generateCourseContentWithRetry(ai, prompt, formData) {
-    let lastError = null;
-    for (const model of TEXT_MODELS_TO_TRY) {
-        try {
-            console.log(`Attempting to generate course with model: ${model}`);
-            const response = await ai.models.generateContent({
-                model: model,
-                contents: [
-                    {
-                        role: "user",
-                        parts: [
-                            {
-                                text: `${prompt}\n${JSON.stringify(formData)}`,
-                            },
-                        ],
-                    },
-                ],
-                config: {
-                    safetySettings: [
-                        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                    ]
-                }
-            });
-            const text = response.candidates?.[0]?.content?.parts?.[0]?.text;
-            if (text) return text;
-        } catch (error) {
-            console.warn(`Model ${model} failed:`, error.message);
-            lastError = error;
-            // Continue to next model
-        }
+    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(
+        query
+    )}&orientation=landscape&per_page=1`;
+
+    const response = await fetch(url, {
+        headers: {
+            Authorization: process.env.PEXELS_API_KEY,
+        },
+    });
+
+    if (!response.ok) {
+        throw new Error("Pexels image fetch failed");
     }
-    throw lastError || new Error("All models failed to generate content.");
+
+    const data = await response.json();
+    return data.photos?.[0]?.src?.large || null;
 }
 
-async function addNewCourse(req, res) {
+/* =====================================================
+   ROUTE
+===================================================== */
+router.post("/generate", async (req, res) => {
     try {
         let { courseId, ...formData } = req.body;
+
         const email = req.user?.email || formData.email;
         if (!email) {
-            return res
-                .status(401)
-                .json({ error: "Unauthorized: user not logged in" });
+            return res.status(401).json({ error: "Unauthorized" });
         }
+
         if (!courseId) courseId = crypto.randomUUID();
 
-        const apiKey = process.env.GEMINI_API_KEY || process.env.GEMINI_API;
-        if (!apiKey) {
-            throw new Error("Gemini API key is missing. Set GEMINI_API_KEY or GEMINI_API in .env");
-        }
+        /* ---------- GENERATE COURSE JSON ---------- */
+        const textResponse = await ai.models.generateContent({
+            model: "gemini-flash-latest",
+            contents: `${COURSE_PROMPT}\nUser Input:\n${JSON.stringify(formData)}`,
+        });
 
-        // 1. Generate course structure using Gemini
-        const ai = new GoogleGenAI({ apiKey });
-        let jsonString;
-        let generatedText;
+        const rawText =
+            textResponse.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
+        const courseJSON = extractJSON(rawText);
+        const parsed = JSON.parse(courseJSON);
+        const course = parsed.course;
+
+        /* ---------- FETCH BANNER IMAGE ---------- */
+        let bannerImageURL = null;
         try {
-            generatedText = await generateCourseContentWithRetry(ai, PROMPT, formData);
-
-            // Extract JSON
-            const extractJSON = (text) => {
-                const first = text.indexOf("{");
-                const last = text.lastIndexOf("}");
-                if (first === -1 || last === -1) return null;
-                return text.substring(first, last + 1);
-            };
-            jsonString = extractJSON(generatedText);
-            if (!jsonString) throw new Error("Invalid JSON in AI output");
-
-            // Validate JSON
-            JSON.parse(jsonString);
-
-        } catch (error) {
-            console.error("AI Generation failed, using fallback:", error.message);
-            const fallback = getFallbackCourse(formData);
-            jsonString = JSON.stringify(fallback);
+            bannerImageURL = await fetchCourseBanner(course);
+        } catch (err) {
+            console.warn("⚠️ Banner fetch failed:", err.message);
         }
 
-        const parsedCourse = JSON.parse(jsonString);
-        const course = parsedCourse.course;
-        const noOfChapters = course.noOfChapters;
-        const imagePrompt = course.bannerImagePrompt;
-
-        // 3. Generate image using Gemini's multimodal capability (Optional)
-        let bannerImageBase64 = null;
-        try {
-            bannerImageBase64 = await GenerateImageWithGemini(imagePrompt);
-        } catch (error) {
-            console.warn("Image generation failed, skipping image:", error.message);
-        }
-
-        // 4. Save course to DB
+        /* ---------- SAVE TO DB ---------- */
         await db.insert(coursesTable).values({
             cid: courseId,
             userEmail: email,
-            name: formData.name,
-            description: formData.description,
-            category: formData.category,
-            level: formData.level,
-            includeVideo: formData.includeVideo,
-            noOfChapters,
-            courseJson: jsonString,
-            bannerImageURL: bannerImageBase64 ? `data:image/png;base64,${bannerImageBase64}` : null,
+            name: course.name,
+            description: course.description,
+            category: course.category,
+            level: course.level,
+            includeVideo: course.includeVideo,
+            noOfChapters: course.noOfChapters,
+            courseJson: courseJSON,
+            bannerImageURL: bannerImageURL,
         });
-        return res.status(200).json({ courseId });
-    } catch (error) {
-        console.error("API error:", error);
-        return res
-            .status(500)
-            .json({ error: error.message || "Internal server error" });
-    }
-}
 
-router.post("/generate", addNewCourse);
+        return res.status(200).json({
+            success: true,
+            courseId,
+        });
+    } catch (error) {
+        console.error("❌ Generate Course Error:", error);
+        return res.status(500).json({
+            error: error.message || "Internal Server Error",
+        });
+    }
+});
 
 export default router;
