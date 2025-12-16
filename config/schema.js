@@ -24,7 +24,7 @@ export const coursesTable = pgTable("courses", {
     .notNull()
     .references(() => usersTable.email),
   bannerImageURL: text("bannerImageURL").default(""),
-  courseContent: varchar("courseContent"), // ✅ just this
+  courseContent: json("courseContent"),
 });
 
 export const enrollmentsTable = pgTable("enrollments", {

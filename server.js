@@ -12,6 +12,7 @@ import getCoursesRouter from "./route/courses.js";
 import generateQuizRouter from "./route/generate-quiz.js";
 import chatpdfRouter from "./route/chatpdf.js";
 import resourcesRouter from "./route/resources.js";
+import courseProgressRouter from "./route/course-progress.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -33,6 +34,7 @@ app.use("/api/get-courses", getCoursesRouter);
 app.use("/api/generate-quiz", generateQuizRouter);
 app.use("/api/chatpdf", chatpdfRouter);
 app.use("/api/resources", resourcesRouter);
+app.use("/api/course-progress", courseProgressRouter);
 
 if (process.env.NODE_ENV !== 'production') {
   const server = app.listen(port, () => {

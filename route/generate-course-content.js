@@ -26,7 +26,7 @@ const GetYoutubeVideo = async (query) => {
             q: query,
             key: process.env.YOUTUBE_API_KEY,
             type: "video",
-            maxResults: 4,
+            maxResults: 5,
         };
 
         const resp = await axios.get(YOUTUBE_BASE_URL, { params });
@@ -51,14 +51,14 @@ Given a chapter name and its topics, generate json-formatted content.
 
 RULES:
 - Output ONLY valid JSON
-- No markdown
+- No markdown in JSON
 - No explanations
 
 FORMAT:
 {
   "chapterName": "Chapter Name",
   "topics": [
-    { "topic": "Topic Name", "content": "json formatted content" }
+    { "topic": "Topic Name", "content": "Detailed explanation with code examples in Markdown format" }
   ]
 }
 
@@ -78,7 +78,7 @@ Chapter data:
             courseJson.chapters.map(async (chapter) => {
                 try {
                     const response = await ai.models.generateContent({
-                        model: "gemini-2.0-flash",
+                        model: "gemini-flash-latest",
                         contents: [
                             {
                                 role: "user",
@@ -95,12 +95,16 @@ Chapter data:
                     const jsonResp = JSON.parse(rawText);
 
                     if (Array.isArray(jsonResp.topics)) {
+                        // Fetch videos for each topic individually
                         for (const topic of jsonResp.topics) {
                             if (typeof topic.content === "string") {
                                 try {
                                     topic.content = JSON.parse(topic.content);
                                 } catch { }
                             }
+
+                            const videos = await GetYoutubeVideo(topic.topic || "");
+                            topic.youtubeVideos = videos;
                         }
                     }
 
@@ -110,11 +114,8 @@ Chapter data:
                         chapter.title ||
                         "";
 
-                    const youtubeVideos = await GetYoutubeVideo(chapterName);
-
                     return {
                         ...jsonResp,
-                        youtubeVideos,
                     };
                 } catch (err) {
                     console.error("Chapter error:", err);
