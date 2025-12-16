@@ -1,6 +1,7 @@
 import express from "express";
 import multer from "multer";
 import fs from "fs";
+import os from "os";
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 import db from "../config/db.js";
@@ -19,7 +20,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 const fileManager = new GoogleAIFileManager(apiKey);
 
 // Configure multer to handle file uploads
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ dest: os.tmpdir() });
 
 // Safety settings to prevent content blocking
 const safetySettings = [

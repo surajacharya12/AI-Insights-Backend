@@ -34,8 +34,11 @@ app.use("/api/generate-quiz", generateQuizRouter);
 app.use("/api/chatpdf", chatpdfRouter);
 app.use("/api/resources", resourcesRouter);
 
-const server = app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  const server = app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+  server.setTimeout(600000);
+}
 
-server.setTimeout(600000);
+export default app;
