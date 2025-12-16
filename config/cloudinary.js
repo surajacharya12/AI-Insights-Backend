@@ -28,4 +28,22 @@ const upload = multer({
     }
 });
 
-export { cloudinary, upload };
+// Configure Cloudinary storage for resources (PDFs)
+const resourceStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'aiinsight/resources',
+        allowed_formats: ['pdf'],
+        resource_type: 'raw' // Important for non-image files like PDFs
+    }
+});
+
+// Create multer upload middleware for resources
+const uploadResource = multer({
+    storage: resourceStorage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    }
+});
+
+export { cloudinary, upload, uploadResource };

@@ -11,6 +11,7 @@ import generateCourseContentRouter from "./route/generate-course-content.js";
 import getCoursesRouter from "./route/courses.js";
 import generateQuizRouter from "./route/generate-quiz.js";
 import chatpdfRouter from "./route/chatpdf.js";
+import resourcesRouter from "./route/resources.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -31,6 +32,7 @@ app.use("/api/enroll", enrollRouter);
 app.use("/api/get-courses", getCoursesRouter);
 app.use("/api/generate-quiz", generateQuizRouter);
 app.use("/api/chatpdf", chatpdfRouter);
+app.use("/api/resources", resourcesRouter);
 
 const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`);

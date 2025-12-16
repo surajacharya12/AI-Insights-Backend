@@ -51,15 +51,50 @@ async function generateWithRetry(prompt, fileData) {
         try {
             console.log(`Trying model: ${modelName}`);
             const model = getModel(modelName);
-            const result = await model.generateContent([
-                { fileData },
-                { text: prompt },
-            ]);
+
+            let result;
+            let attempt = 0;
+            const maxRetries = 5;
+
+            while (attempt < maxRetries) {
+                try {
+                    result = await model.generateContent([
+                        { fileData },
+                        { text: prompt },
+                    ]);
+                    break;
+                } catch (e) {
+                    // Handle specific file access errors (403/404 for files)
+                    if (e.message.includes('403') && (e.message.includes('File') || e.message.includes('permission'))) {
+                        throw new Error("FILE_EXPIRED_OR_MISSING");
+                    }
+
+                    if (e.message.includes('429') || e.status === 429) {
+                        attempt++;
+                        if (attempt >= maxRetries) throw e;
+
+                        let delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                        const match = e.message.match(/retry in (\d+(\.\d+)?)s/);
+                        if (match && match[1]) {
+                            delay = Math.ceil(parseFloat(match[1])) * 1000 + 1000;
+                        }
+
+                        console.log(`Model ${modelName} hit 429, retrying in ${Math.round(delay)}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+
             const response = result.response;
             const text = response.text();
             if (text) return text;
         } catch (error) {
             console.error(`Error with ${modelName}:`, error.message);
+            if (error.message === "FILE_EXPIRED_OR_MISSING") {
+                throw error;
+            }
             lastError = error;
         }
     }
@@ -219,6 +254,14 @@ router.post("/chat", async (req, res) => {
             });
         } catch (error) {
             console.error("Error generating answer:", error);
+
+            if (error.message === "FILE_EXPIRED_OR_MISSING") {
+                return res.status(410).json({
+                    message: "The PDF file has expired or is no longer available on the server. Please delete this PDF from your list and re-upload it to continue chatting.",
+                    error: "FILE_EXPIRED"
+                });
+            }
+
             res.status(500).json({
                 message: "Error generating answer",
                 error: error.message

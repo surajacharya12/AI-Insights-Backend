@@ -62,3 +62,15 @@ export const userPdfsTable = pgTable("user_pdfs", {
   uploadedAt: varchar("uploadedAt").notNull(),
 });
 
+export const resourcesTable = pgTable("resources", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  topic: varchar("topic").notNull(),
+  description: varchar("description").notNull(),
+  authorName: varchar("authorName").notNull(),
+  authorEmail: varchar("authorEmail").notNull(),
+  fileUrl: varchar("fileUrl").notNull(),
+  fileName: varchar("fileName").notNull(),
+  date: varchar("date").notNull(),
+  views: integer("views").default(0),
+});
+

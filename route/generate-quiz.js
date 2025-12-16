@@ -26,13 +26,57 @@ Return pure JSON only. No markdown, no code fences.`;
 
     let lastError = null;
 
-    for (const modelName of MODELS_TO_TRY) {
+    for (const modelName of ['gemini-1.5-flash', 'gemini-2.0-flash']) {
         try {
-            const model = genAI.getGenerativeModel({ model: modelName });
-            const result = await model.generateContent(prompt);
-            const responseText = await result.response.text();
+            const model = genAI.getGenerativeModel({
+                model: modelName,
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                ]
+            });
+
+            let result;
+            let attempt = 0;
+            const maxRetries = 5;
+
+            while (attempt < maxRetries) {
+                try {
+                    result = await model.generateContent(prompt);
+                    break;
+                } catch (e) {
+                    if (e.message.includes('429') || e.status === 429) {
+                        attempt++;
+                        if (attempt >= maxRetries) throw e;
+
+                        let delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+
+                        // Try to parse retry time from error message
+                        const match = e.message.match(/retry in (\d+(\.\d+)?)s/);
+                        if (match && match[1]) {
+                            delay = Math.ceil(parseFloat(match[1])) * 1000 + 1000; // Add 1s buffer
+                        }
+
+                        console.log(`Model ${modelName} hit 429, retrying in ${Math.round(delay)}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    } else {
+                        throw e;
+                    }
+                }
+            }
+
+            const response = await result.response;
+            const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+
+            if (!responseText) {
+                throw new Error("Empty response from AI model");
+            }
+
             const cleaned = responseText.replace(/```json|```/g, '').trim();
-            const quizJSON = JSON.parse(cleaned);
+            // Validate JSON
+            JSON.parse(cleaned);
             return res.json({ quiz: cleaned });
         } catch (err) {
             console.warn(`Model ${modelName} failed:`, err.message);

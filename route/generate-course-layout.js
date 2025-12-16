@@ -52,6 +52,12 @@ async function GenerateImageWithGemini(prompt) {
             config: {
                 responseModalities: [Modality.IMAGE, Modality.TEXT],
                 image: { width: 1024, height: 1024 },
+                safetySettings: [
+                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
+                ],
             },
         });
         const imagePart = response.candidates?.[0]?.content?.parts.find(
