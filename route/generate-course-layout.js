@@ -1,6 +1,6 @@
 import express from "express";
 import crypto from "crypto";
-import fetch from "node-fetch";
+
 import { GoogleGenAI } from "@google/genai";
 import db from "../config/db.js";
 import { coursesTable } from "../config/schema.js";
@@ -68,27 +68,16 @@ function extractJSON(text) {
 }
 
 /* =====================================================
-   FETCH BANNER FROM PEXELS (FREE)
+   GENERATE BANNER VIA POLLINATIONS
 ===================================================== */
 async function fetchCourseBanner(course) {
-    const query = `${course.name} ${course.category} ${course.level}`;
+    const prompt = course.bannerImagePrompt ||
+        `${course.name} ${course.category} ${course.level} course cover`;
 
-    const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(
-        query
-    )}&orientation=landscape&per_page=1`;
+    // Generate image using Pollinations API (with nologo)
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
 
-    const response = await fetch(url, {
-        headers: {
-            Authorization: process.env.PEXELS_API_KEY,
-        },
-    });
-
-    if (!response.ok) {
-        throw new Error("Pexels image fetch failed");
-    }
-
-    const data = await response.json();
-    return data.photos?.[0]?.src?.large || null;
+    return url;
 }
 
 /* =====================================================

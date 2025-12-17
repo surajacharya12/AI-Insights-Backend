@@ -13,64 +13,34 @@ const ai = new GoogleGenAI({
 router.post("/generate-image", async (req, res) => {
   try {
     const { prompt } = req.body;
-
     if (!prompt) return res.status(400).json({ success: false, message: "Prompt is required" });
 
     try {
-      console.log("Attempting native image generation with gemini-2.5-flash-image...");
+      console.log("Generating image via Pollinations API...");
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash-image",
-        contents: prompt,
+      // Pollinations API call
+      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?nologo=true`;
+      const response = await fetch(pollinationsUrl);
+
+      if (!response.ok) throw new Error("Pollinations API request failed");
+
+      const imageBuffer = await response.arrayBuffer();
+      const imageBase64 = Buffer.from(imageBuffer).toString("base64");
+
+      return res.json({
+        success: true,
+        tool: "Pollinations Image API",
+        output: { image: imageBase64, caption: prompt },
       });
-
-      let imageBase64 = null;
-      let textOutput = "";
-
-      for (const part of response.candidates[0].content.parts) {
-        if (part.text) textOutput += part.text;
-        else if (part.inlineData) imageBase64 = part.inlineData.data;
-      }
-
-      if (imageBase64) {
-        return res.json({
-          success: true,
-          tool: "Gemini Native Image Generator",
-          output: { image: imageBase64, caption: textOutput || "AI-generated image" },
-        });
-      }
     } catch (imageError) {
-      console.warn("Gemini native image generation failed:", imageError.message);
-    }
-
-    // Fallback: Enhanced prompt
-    try {
-      console.log("Falling back to enhanced prompt generation...");
-      const response = await ai.models.generateContent({
-        model: "gemini-2.0-flash",
-        contents: `Create a highly detailed AI image prompt based on: "${prompt}". Return ONLY the final enhanced prompt.`,
-      });
-
-      const enhancedPrompt = response.text.trim();
-
-      return res.json({
-        success: true,
-        tool: "Gemini Enhanced Prompt Generator (Fallback)",
-        output: { enhanced_prompt: enhancedPrompt, is_fallback: true },
-      });
-    } catch (textError) {
-      console.warn("Gemini text generation failed:", textError.message);
-      return res.json({
-        success: true,
-        tool: "Raw Prompt (Fallback)",
-        output: { enhanced_prompt: prompt, is_fallback: true, is_raw: true },
-      });
+      console.error("Pollinations image generation failed:", imageError.message);
+      return res.status(500).json({ success: false, message: imageError.message });
     }
   } catch (error) {
     console.error("Image Generation Error:", error);
-    handleGeminiError(error, res, "generate-image");
+    return res.status(500).json({ success: false, message: error.message });
   }
-});
+})
 
 /* =====================================================
    GRAMMAR & WRITING TOOL (Grammarly-like)
@@ -85,42 +55,39 @@ router.post("/grammar-check", async (req, res) => {
     const trimmedText = countWords(text) > 2000 ? text.split(/\s+/).slice(0, 2000).join(" ") : text;
 
     const prompt = `Correct the grammar of the following text and return only the corrected version:\n\n"${trimmedText}"`;
-    const GEMINI_API_KEY = process.env.GEMINI_API;
 
     try {
-      const response = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY_GRAMMAR}`,
-        { contents: [{ parts: [{ text: prompt }] }] },
-        { headers: { "Content-Type": "application/json" } }
-      );
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY_GRAMMAR}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "xiaomi/mimo-v2-flash:free",
+          messages: [
+            { role: "user", content: prompt }
+          ]
+        }),
+      });
 
-      const corrected = response.data.candidates?.[0]?.content?.parts?.[0]?.text || trimmedText;
+      const data = await response.json();
+
+      const corrected = data.choices?.[0]?.message?.content || trimmedText;
 
       return res.json({
         success: true,
-        tool: "Gemini Grammar Checker",
+        tool: "OpenRouter Grammar Checker",
         original_text: trimmedText,
         corrected_text: corrected,
       });
-    } catch (geminiError) {
-      console.warn("Gemini error:", geminiError.response?.data || geminiError.message);
-
-      if (geminiError.response?.status === 429) {
-        return res.status(429).json({
-          success: false,
-          message: "Daily Gemini API quota exceeded. Please try again later.",
-          retryAfter: 30,
-          fallback: {
-            message: "Upgrade your Gemini API plan for unlimited access",
-            link: "https://ai.google.dev/pricing",
-          },
-        });
-      }
+    } catch (routerError) {
+      console.error("OpenRouter Error:", routerError.message);
 
       return res.status(500).json({
         success: false,
-        message: "Error checking grammar",
-        error: geminiError.response?.data || geminiError.message,
+        message: "Error checking grammar via OpenRouter",
+        error: routerError.message,
       });
     }
   } catch (error) {
@@ -128,7 +95,6 @@ router.post("/grammar-check", async (req, res) => {
     res.status(500).json({ success: false, message: "Server error", error: error.message });
   }
 });
-
 /* =====================================================
    CENTRALIZED ERROR HANDLER
 ===================================================== */

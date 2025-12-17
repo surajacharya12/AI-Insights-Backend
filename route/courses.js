@@ -2,7 +2,7 @@
 import express from "express";
 import { coursesTable, usersTable } from "../config/schema.js";
 import db from "../config/db.js";
-import { desc, eq, and, ne, sql } from "drizzle-orm";
+import { desc, eq, and, sql } from "drizzle-orm";
 
 const router = express.Router();
 
@@ -19,10 +19,11 @@ router.get("/", async (req, res) => {
                 .from(coursesTable)
                 .where(
                     and(
-                        ne(coursesTable.courseContent, "{}"),
-                        ne(coursesTable.courseContent, "[]"),
-                        ne(coursesTable.courseContent, ""),
-                        sql`${coursesTable.courseContent} IS NOT NULL`
+                        // Check if courseContent is not null and not empty JSON objects/arrays
+                        sql`${coursesTable.courseContent} IS NOT NULL`,
+                        sql`${coursesTable.courseContent}::text != '{}'`,
+                        sql`${coursesTable.courseContent}::text != '[]'`,
+                        sql`${coursesTable.courseContent}::text != 'null'`
                     )
                 )
                 .orderBy(desc(coursesTable.id));

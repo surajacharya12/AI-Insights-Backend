@@ -1,21 +1,69 @@
 import express from 'express';
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import db from '../config/db.js';
 import { quizHistoryTable } from '../config/schema.js';
-import { eq } from "drizzle-orm";
+import { eq } from 'drizzle-orm';
 
 const router = express.Router();
-const MODELS_TO_TRY = ['gemini-flash-latest'];
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_QUIZ;
+const OPENROUTER_MODEL = 'google/gemma-3n-e2b-it:free';
+
+// Helper function to call OpenRouter API
+async function generateQuizFromOpenRouter(prompt) {
+    const maxRetries = 5;
+    let attempt = 0;
+
+    while (attempt < maxRetries) {
+        try {
+            const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    model: OPENROUTER_MODEL,
+                    messages: [{ role: "user", content: prompt }]
+                })
+            });
+
+            if (response.status === 429) {
+                attempt++;
+                const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+                console.log(`Hit 429, retrying in ${Math.round(delay)}ms...`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+            }
+
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(`OpenRouter API error: ${response.status} - ${text}`);
+            }
+
+            const data = await response.json();
+            const responseText = data.choices?.[0]?.message?.content;
+            if (!responseText) throw new Error("Empty response from OpenRouter");
+
+            // Clean up JSON formatting
+            const cleaned = responseText.replace(/```json|```/g, '').trim();
+            JSON.parse(cleaned); // Validate JSON
+            return cleaned;
+
+        } catch (err) {
+            if (attempt >= maxRetries - 1) throw err;
+            attempt++;
+            const delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
+            console.warn(`Attempt ${attempt} failed, retrying in ${Math.round(delay)}ms...`, err.message);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
 
 // Generate quiz
 router.post('/', async (req, res) => {
     const { topic, numQuestions = 5 } = req.body;
     if (!topic) return res.status(400).json({ error: 'Topic is required' });
+    if (!OPENROUTER_API_KEY) return res.status(500).json({ error: 'API key missing' });
 
-    const apiKey = process.env.GEMINI_API_KEY_QUIZ;
-    if (!apiKey) return res.status(500).json({ error: 'API key missing' });
-
-    const genAI = new GoogleGenerativeAI(apiKey);
     const prompt = `Generate a quiz with exactly ${numQuestions} multiple-choice questions about "${topic}" in JSON format:
 [{
   "question": "Question?",
@@ -24,67 +72,13 @@ router.post('/', async (req, res) => {
 }]
 Return pure JSON only. No markdown, no code fences.`;
 
-    let lastError = null;
-
-    for (const modelName of ['gemini-1.5-flash', 'gemini-2.0-flash']) {
-        try {
-            const model = genAI.getGenerativeModel({
-                model: modelName,
-                safetySettings: [
-                    { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
-                    { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' },
-                ]
-            });
-
-            let result;
-            let attempt = 0;
-            const maxRetries = 5;
-
-            while (attempt < maxRetries) {
-                try {
-                    result = await model.generateContent(prompt);
-                    break;
-                } catch (e) {
-                    if (e.message.includes('429') || e.status === 429) {
-                        attempt++;
-                        if (attempt >= maxRetries) throw e;
-
-                        let delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-
-                        // Try to parse retry time from error message
-                        const match = e.message.match(/retry in (\d+(\.\d+)?)s/);
-                        if (match && match[1]) {
-                            delay = Math.ceil(parseFloat(match[1])) * 1000 + 1000; // Add 1s buffer
-                        }
-
-                        console.log(`Model ${modelName} hit 429, retrying in ${Math.round(delay)}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        throw e;
-                    }
-                }
-            }
-
-            const response = await result.response;
-            const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
-
-            if (!responseText) {
-                throw new Error("Empty response from AI model");
-            }
-
-            const cleaned = responseText.replace(/```json|```/g, '').trim();
-            // Validate JSON
-            JSON.parse(cleaned);
-            return res.json({ quiz: cleaned });
-        } catch (err) {
-            console.warn(`Model ${modelName} failed:`, err.message);
-            lastError = err;
-        }
+    try {
+        const quiz = await generateQuizFromOpenRouter(prompt);
+        res.json({ quiz });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ error: err.message || 'Failed to generate quiz' });
     }
-
-    return res.status(500).json({ error: lastError?.message || 'Failed to generate quiz' });
 });
 
 // Save quiz result

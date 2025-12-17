@@ -2,7 +2,9 @@ import express from "express";
 
 const router = express.Router();
 
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY_THINK_BOT}`;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_THINK_BOT; // Add your OpenRouter API key here
+const SITE_URL = process.env.SITE_URL || "http://localhost:3000"; // optional
+const SITE_NAME = process.env.SITE_NAME || "ThinkBot"; // optional
 
 // POST /api/chat
 router.post("/chat", async (req, res) => {
@@ -29,44 +31,49 @@ Question:
 ${message}
 `;
 
-    const geminiRes = await fetch(GEMINI_ENDPOINT, {
+    const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
+        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+        "HTTP-Referer": SITE_URL,
+        "X-Title": SITE_NAME,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        contents: [
+        model: "nex-agi/deepseek-v3.1-nex-n1:free",
+        messages: [
           {
             role: "user",
-            parts: [{ text: prompt }],
+            content: prompt,
           },
         ],
       }),
     });
 
-    if (!geminiRes.ok) {
-      const errText = await geminiRes.text();
-      return res.status(geminiRes.status).json({
+    if (!openRouterRes.ok) {
+      const errText = await openRouterRes.text();
+      return res.status(openRouterRes.status).json({
         success: false,
-        error: "Gemini API error",
+        error: "OpenRouter API error",
         details: errText,
       });
     }
 
-    const data = await geminiRes.json();
-    const text =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const data = await openRouterRes.json();
+
+    // The response structure might vary depending on the OpenRouter model
+    const answer =
+      data?.choices?.[0]?.message?.content || "";
 
     return res.json({
       success: true,
       data: {
-        answer: text,
+        answer,
       },
     });
   } catch (error) {
     console.error("ThinkBot Error:", error);
 
-    // 🔹 Handle quota exceeded
     if (error.message?.includes("429")) {
       return res.status(429).json({
         success: false,

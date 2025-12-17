@@ -7,6 +7,9 @@ export const usersTable = pgTable("users", {
   email: varchar("email", { length: 255 }).notNull().unique(),
   password: varchar("password", { length: 255 }).notNull(),
   photo: varchar("photo", { length: 255 }), // Optional
+  resetOtp: varchar("resetOtp", { length: 6 }),
+  resetOtpExpires: varchar("resetOtpExpires"),
+  isVerified: boolean("isVerified").default(false),
 });
 
 // Courses Table
@@ -52,14 +55,17 @@ export const quizHistoryTable = pgTable("quiz_history", {
 // User PDFs Table for Chat with PDF feature
 export const userPdfsTable = pgTable("user_pdfs", {
   id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
-  userEmail: varchar("userEmail")
+
+  userEmail: varchar("user_email", { length: 255 })
     .notNull()
     .references(() => usersTable.email),
-  fileName: varchar("fileName").notNull(),
-  geminiFileName: varchar("geminiFileName").notNull(), // Gemini file.name for deletion
-  geminiFileUri: varchar("geminiFileUri").notNull(), // Gemini file.uri for content generation
-  geminiMimeType: varchar("geminiMimeType").notNull(),
-  uploadedAt: varchar("uploadedAt").notNull(),
+
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+
+  // 🔥 NEW: extracted PDF text
+  pdfText: text("pdf_text").notNull(),
+
+  uploadedAt: varchar("uploaded_at", { length: 50 }).notNull(),
 });
 
 export const resourcesTable = pgTable("resources", {

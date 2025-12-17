@@ -2,113 +2,67 @@ import express from "express";
 import multer from "multer";
 import fs from "fs";
 import os from "os";
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
-import { GoogleAIFileManager } from "@google/generative-ai/server";
+import fetch from "node-fetch";
+import pdf from "pdf-parse/lib/pdf-parse.js";
 import db from "../config/db.js";
 import { userPdfsTable } from "../config/schema.js";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();
 
-const apiKey = process.env.GEMINI_API_KEY_CHATPDF;
-
-if (!apiKey) {
-    console.error("WARNING: GEMINI_API_KEY_CHATPDF is not set!");
-}
-
-const genAI = new GoogleGenerativeAI(apiKey);
-const fileManager = new GoogleAIFileManager(apiKey);
-
-// Configure multer to handle file uploads
+// ================= CONFIG =================
 const upload = multer({ dest: os.tmpdir() });
 
-// Safety settings to prevent content blocking
-const safetySettings = [
-    { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT, threshold: HarmBlockThreshold.BLOCK_NONE },
-    { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_NONE },
-];
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_CHATPDF;
 
-const generationConfig = {
-    temperature: 0.7,
-    topP: 0.95,
-    topK: 40,
-    maxOutputTokens: 8192,
-};
+if (!OPENROUTER_API_KEY) {
+    console.error("❌ OPENROUTER_API_KEY_CHATPDF is not set");
+}
 
-const MODELS = ["gemini-flash-latest"];
+const OPENROUTER_MODEL = "tngtech/deepseek-r1t2-chimera:free";
 
-function getModel(modelName = "gemini-flash-latest") {
-    return genAI.getGenerativeModel({
-        model: modelName,
-        safetySettings,
+// ================= HELPERS =================
+async function askOpenRouter(context, question) {
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            model: OPENROUTER_MODEL,
+            messages: [
+                {
+                    role: "system",
+                    content:
+                        "You are an AI assistant. Answer strictly based on the provided PDF content. Use markdown formatting.",
+                },
+                {
+                    role: "user",
+                    content: `PDF Content:\n${context}\n\nQuestion:\n${question}`,
+                },
+            ],
+        }),
     });
-}
 
-async function generateWithRetry(prompt, fileData) {
-    let lastError = null;
-    for (const modelName of MODELS) {
-        try {
-            console.log(`Trying model: ${modelName}`);
-            const model = getModel(modelName);
+    const data = await response.json();
 
-            let result;
-            let attempt = 0;
-            const maxRetries = 5;
-
-            while (attempt < maxRetries) {
-                try {
-                    result = await model.generateContent([
-                        { fileData },
-                        { text: prompt },
-                    ]);
-                    break;
-                } catch (e) {
-                    // Handle specific file access errors (403/404 for files)
-                    if (e.message.includes('403') && (e.message.includes('File') || e.message.includes('permission'))) {
-                        throw new Error("FILE_EXPIRED_OR_MISSING");
-                    }
-
-                    if (e.message.includes('429') || e.status === 429) {
-                        attempt++;
-                        if (attempt >= maxRetries) throw e;
-
-                        let delay = Math.pow(2, attempt) * 1000 + Math.random() * 1000;
-                        const match = e.message.match(/retry in (\d+(\.\d+)?)s/);
-                        if (match && match[1]) {
-                            delay = Math.ceil(parseFloat(match[1])) * 1000 + 1000;
-                        }
-
-                        console.log(`Model ${modelName} hit 429, retrying in ${Math.round(delay)}ms...`);
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                    } else {
-                        throw e;
-                    }
-                }
-            }
-
-            const response = result.response;
-            const text = response.text();
-            if (text) return text;
-        } catch (error) {
-            console.error(`Error with ${modelName}:`, error.message);
-            if (error.message === "FILE_EXPIRED_OR_MISSING") {
-                throw error;
-            }
-            lastError = error;
-        }
+    if (!data.choices || !data.choices.length) {
+        throw new Error("No response from OpenRouter");
     }
-    throw lastError || new Error("All models failed to generate content");
+
+    return data.choices[0].message.content;
 }
 
-// Get user's uploaded PDFs
+// ================= ROUTES =================
+
+// 📄 List PDFs
 router.get("/list", async (req, res) => {
     try {
         const { userEmail } = req.query;
 
         if (!userEmail) {
-            return res.status(400).json({ message: "User email is required." });
+            return res.status(400).json({ message: "User email is required" });
         }
 
         const pdfs = await db
@@ -116,201 +70,123 @@ router.get("/list", async (req, res) => {
             .from(userPdfsTable)
             .where(eq(userPdfsTable.userEmail, userEmail));
 
-        res.status(200).json({ pdfs });
-    } catch (error) {
-        console.error("Error fetching PDFs:", error);
-        res.status(500).json({ message: "Error fetching PDFs" });
+        res.json({ pdfs });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Failed to fetch PDFs" });
     }
 });
 
-// Upload PDF (no immediate summary - just store it)
+// 📤 Upload PDF
 router.post("/upload", upload.single("pdf"), async (req, res) => {
-    console.log("Received PDF upload request");
-
     try {
-        const file = req.file;
         const { userEmail } = req.body;
+        const file = req.file;
 
-        if (!userEmail) {
+        if (!userEmail || !file) {
             if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-            return res.status(400).json({ message: "User email is required." });
+            return res.status(400).json({ message: "Email and PDF required" });
         }
-
-        if (!file) {
-            return res.status(400).json({ message: "No file uploaded." });
-        }
-
-        console.log(`File received: ${file.originalname}, size: ${file.size} bytes`);
 
         if (file.mimetype !== "application/pdf") {
             fs.unlinkSync(file.path);
-            return res.status(400).json({ message: "Only PDF files are allowed." });
+            return res.status(400).json({ message: "Only PDF files allowed" });
         }
 
-        try {
-            // Upload the PDF to Gemini File API
-            console.log("Uploading file to Gemini...");
-            const uploadResult = await fileManager.uploadFile(file.path, {
-                mimeType: "application/pdf",
-                displayName: file.originalname,
-            });
+        // ✅ Extract PDF text
+        const buffer = fs.readFileSync(file.path);
+        const parsed = await pdf(buffer); // ✅ FIXED
 
-            console.log(`File uploaded: ${uploadResult.file.uri}`);
-
-            // Wait for file processing
-            let geminiFile = uploadResult.file;
-            while (geminiFile.state === "PROCESSING") {
-                console.log("Waiting for file processing...");
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                geminiFile = await fileManager.getFile(geminiFile.name);
-            }
-
-            if (geminiFile.state === "FAILED") {
-                throw new Error("File processing failed");
-            }
-
-            // Store in database
-            const newPdf = await db.insert(userPdfsTable).values({
+        const inserted = await db
+            .insert(userPdfsTable)
+            .values({
                 userEmail,
                 fileName: file.originalname,
-                geminiFileName: geminiFile.name,
-                geminiFileUri: geminiFile.uri,
-                geminiMimeType: geminiFile.mimeType,
+                pdfText: parsed.text,
                 uploadedAt: new Date().toISOString(),
-            }).returning();
+            })
+            .returning();
 
-            // Clean up local file
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-            }
+        fs.unlinkSync(file.path);
 
-            res.status(200).json({
-                message: "PDF uploaded successfully! You can now ask questions about it.",
-                pdf: newPdf[0],
-            });
-        } catch (error) {
-            console.error("Error processing PDF:", error);
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-            }
-            res.status(500).json({
-                message: "Error processing PDF",
-                error: error.message
-            });
-        }
-    } catch (error) {
-        console.error("Error in /upload route:", error);
-        res.status(500).json({ message: "Error with request" });
+        res.json({
+            message: "PDF uploaded successfully",
+            pdf: inserted[0],
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "PDF upload failed",
+            error: err.message,
+        });
     }
 });
 
-// Chat with a specific PDF
+// 💬 Chat with PDF
 router.post("/chat", async (req, res) => {
-    console.log("Received chat request");
-
     try {
         const { pdfId, question, userEmail } = req.body;
 
-        if (!pdfId) {
-            return res.status(400).json({ message: "PDF ID is required." });
+        if (!pdfId || !question) {
+            return res.status(400).json({ message: "PDF ID and question required" });
         }
 
-        if (!question || !question.trim()) {
-            return res.status(400).json({ message: "Question is required." });
-        }
-
-        // Get PDF from database
         const pdfs = await db
             .select()
             .from(userPdfsTable)
-            .where(eq(userPdfsTable.id, pdfId));
+            .where(eq(userPdfsTable.id, Number(pdfId)));
 
-        if (pdfs.length === 0) {
-            return res.status(404).json({
-                message: "PDF not found. Please upload a PDF first."
-            });
+        if (!pdfs.length) {
+            return res.status(404).json({ message: "PDF not found" });
         }
 
-        const pdf = pdfs[0];
+        const pdfRow = pdfs[0];
 
-        // Verify ownership if userEmail provided
-        if (userEmail && pdf.userEmail !== userEmail) {
-            return res.status(403).json({ message: "You don't have access to this PDF." });
+        if (userEmail && pdfRow.userEmail !== userEmail) {
+            return res.status(403).json({ message: "Unauthorized access" });
         }
 
-        console.log(`Answering question about: ${pdf.fileName}`);
+        const answer = await askOpenRouter(pdfRow.pdfText, question);
 
-        try {
-            const prompt = `Based on the PDF document, please answer the following question using **markdown formatting** for better readability:\n\n**Question:** ${question}\n\nProvide a clear, well-structured answer with bullet points or numbered lists where appropriate.`;
-
-            const fileData = {
-                mimeType: pdf.geminiMimeType,
-                fileUri: pdf.geminiFileUri,
-            };
-
-            const answer = await generateWithRetry(prompt, fileData);
-
-            res.status(200).json({
-                answer: answer || "I couldn't find an answer to that question in the document.",
-            });
-        } catch (error) {
-            console.error("Error generating answer:", error);
-
-            if (error.message === "FILE_EXPIRED_OR_MISSING") {
-                return res.status(410).json({
-                    message: "The PDF file has expired or is no longer available on the server. Please delete this PDF from your list and re-upload it to continue chatting.",
-                    error: "FILE_EXPIRED"
-                });
-            }
-
-            res.status(500).json({
-                message: "Error generating answer",
-                error: error.message
-            });
-        }
-    } catch (error) {
-        console.error("Error in /chat route:", error);
-        res.status(500).json({ message: "Error with request" });
+        res.json({ answer });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            message: "Failed to generate answer",
+            error: err.message,
+        });
     }
 });
 
-// Delete a PDF
+// 🗑 Delete PDF
 router.delete("/delete/:id", async (req, res) => {
     try {
         const { id } = req.params;
         const { userEmail } = req.body;
 
-        // Get PDF from database
         const pdfs = await db
             .select()
             .from(userPdfsTable)
-            .where(eq(userPdfsTable.id, parseInt(id)));
+            .where(eq(userPdfsTable.id, Number(id)));
 
-        if (pdfs.length === 0) {
-            return res.status(404).json({ message: "PDF not found." });
+        if (!pdfs.length) {
+            return res.status(404).json({ message: "PDF not found" });
         }
 
-        const pdf = pdfs[0];
+        const pdfRow = pdfs[0];
 
-        // Verify ownership
-        if (userEmail && pdf.userEmail !== userEmail) {
-            return res.status(403).json({ message: "You don't have access to this PDF." });
+        if (userEmail && pdfRow.userEmail !== userEmail) {
+            return res.status(403).json({ message: "Unauthorized" });
         }
 
-        // Delete from Gemini
-        try {
-            await fileManager.deleteFile(pdf.geminiFileName);
-        } catch (e) {
-            console.log("Could not delete remote file:", e.message);
-        }
+        await db
+            .delete(userPdfsTable)
+            .where(eq(userPdfsTable.id, Number(id)));
 
-        // Delete from database
-        await db.delete(userPdfsTable).where(eq(userPdfsTable.id, parseInt(id)));
-
-        res.status(200).json({ message: "PDF deleted successfully." });
-    } catch (error) {
-        console.error("Error deleting PDF:", error);
-        res.status(500).json({ message: "Error deleting PDF" });
+        res.json({ message: "PDF deleted successfully" });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ message: "Delete failed" });
     }
 });
 

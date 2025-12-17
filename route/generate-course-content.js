@@ -1,19 +1,21 @@
 import express from "express";
 import axios from "axios";
-import { GoogleGenAI } from "@google/genai";
 import db from "../config/db.js";
 import { coursesTable } from "../config/schema.js";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();
-const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3/search";
 
 /* =====================================================
-   GEMINI INIT
+   CONSTANTS
 ===================================================== */
-const ai = new GoogleGenAI({
-    apiKey: process.env.GEMINI_API_COURSE_CONTENT,
-});
+const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3/search";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+
+/* =====================================================
+   UTILS
+===================================================== */
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /* =====================================================
    YOUTUBE FETCH
@@ -37,7 +39,39 @@ const GetYoutubeVideo = async (query) => {
         }));
     } catch (error) {
         console.error("YouTube API error:", error.message);
-        return [];
+        return []
+    }
+};
+/* =====================================================
+   OPENROUTER XIAOMI MIMO-V2 (RATE-LIMIT SAFE)
+===================================================== */
+const callOpenRouter = async (prompt, retries = 3) => {
+    try {
+        const response = await axios.post(
+            OPENROUTER_URL,
+            {
+                model: "xiaomi/mimo-v2-flash:free",
+                messages: [{ role: "user", content: prompt }],
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${process.env.OPENROUTER_API_KEY_CONTENT}`,
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": process.env.SITE_URL || "http://localhost:3000",
+                    "X-Title": "AI Insight Course Generator",
+                },
+                timeout: 20000,
+            }
+        );
+
+        return response.data.choices[0].message.content;
+    } catch (err) {
+        if (err.response?.status === 429 && retries > 0) {
+            console.warn("⚠️ OpenRouter rate limit hit. Retrying in 3s...");
+            await sleep(3000);
+            return callOpenRouter(prompt, retries - 1);
+        }
+        throw err;
     }
 };
 
@@ -46,8 +80,6 @@ const GetYoutubeVideo = async (query) => {
 ===================================================== */
 router.post("/", async (req, res) => {
     const PROMPT = `You are an AI that generates strictly valid JSON educational content.
-
-Given a chapter name and its topics, generate json-formatted content.
 
 RULES:
 - Output ONLY valid JSON
@@ -58,7 +90,10 @@ FORMAT:
 {
   "chapterName": "Chapter Name",
   "topics": [
-    { "topic": "Topic Name", "content": "Detailed explanation with code examples in Markdown format" }
+    {
+      "topic": "Topic Name",
+      "content": "Detailed explanation with code examples in Markdown format"
+    }
   ]
 }
 
@@ -74,59 +109,43 @@ Chapter data:
             });
         }
 
-        const CourseContent = await Promise.all(
-            courseJson.chapters.map(async (chapter) => {
-                try {
-                    const response = await ai.models.generateContent({
-                        model: "gemini-flash-latest",
-                        contents: [
-                            {
-                                role: "user",
-                                parts: [{ text: PROMPT + JSON.stringify(chapter) }],
-                            },
-                        ],
-                    });
+        const CourseContent = [];
 
-                    let rawText =
-                        response?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+        // 🚫 NO Promise.all — sequential generation only
+        for (const chapter of courseJson.chapters) {
+            try {
+                let rawText = await callOpenRouter(
+                    PROMPT + JSON.stringify(chapter)
+                );
 
-                    rawText = rawText.replace(/^```.*\n?/, "").replace(/```$/, "");
+                rawText = rawText
+                    .trim()
+                    .replace(/^```.*\n?/, "")
+                    .replace(/```$/, "");
 
-                    const jsonResp = JSON.parse(rawText);
+                const jsonResp = JSON.parse(rawText);
 
-                    if (Array.isArray(jsonResp.topics)) {
-                        // Fetch videos for each topic individually
-                        for (const topic of jsonResp.topics) {
-                            if (typeof topic.content === "string") {
-                                try {
-                                    topic.content = JSON.parse(topic.content);
-                                } catch { }
-                            }
-
-                            const videos = await GetYoutubeVideo(topic.topic || "");
-                            topic.youtubeVideos = videos;
-                        }
+                if (Array.isArray(jsonResp.topics)) {
+                    for (const topic of jsonResp.topics) {
+                        const videos = await GetYoutubeVideo(topic.topic || "");
+                        topic.youtubeVideos = videos;
                     }
-
-                    const chapterName =
-                        jsonResp.chapterName ||
-                        chapter.chapterName ||
-                        chapter.title ||
-                        "";
-
-                    return {
-                        ...jsonResp,
-                    };
-                } catch (err) {
-                    console.error("Chapter error:", err);
-                    return {
-                        error: true,
-                        chapter: chapter.chapterName || "unknown",
-                        message: "Failed to generate content",
-                    };
                 }
-            })
-        );
+
+                CourseContent.push(jsonResp);
+
+                // ⏳ REQUIRED delay for free tier
+                await sleep(2000);
+
+            } catch (err) {
+                console.error("Chapter error:", err.message);
+                CourseContent.push({
+                    error: true,
+                    chapter: chapter.chapterName || "unknown",
+                    message: "Failed to generate content",
+                });
+            }
+        }
 
         await db
             .update(coursesTable)
@@ -137,6 +156,7 @@ Chapter data:
             courseName: courseTitle,
             CourseContent,
         });
+
     } catch (err) {
         console.error("Fatal error:", err);
         res.status(500).json({
