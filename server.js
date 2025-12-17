@@ -17,9 +17,21 @@ import courseProgressRouter from "./route/course-progress.js";
 const app = express();
 const port = process.env.PORT || 3001;
 
+/* =====================================================
+   GLOBAL MIDDLEWARE
+===================================================== */
 app.use(cors());
-app.use(express.json());
 
+/**
+ * 🔑 VERY IMPORTANT
+ * Increase body size for base64 images
+ */
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+/* =====================================================
+   ROUTES
+===================================================== */
 app.get("/", (req, res) => {
   res.send("Hello from AI Insight backend!");
 });
@@ -36,11 +48,29 @@ app.use("/api/chatpdf", chatpdfRouter);
 app.use("/api/resources", resourcesRouter);
 app.use("/api/course-progress", courseProgressRouter);
 
-if (process.env.NODE_ENV !== 'production') {
+/* =====================================================
+   ERROR HANDLER (Payload Friendly)
+===================================================== */
+app.use((err, req, res, next) => {
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({
+      success: false,
+      message: "Uploaded file is too large. Max limit is 50MB.",
+    });
+  }
+  next(err);
+});
+
+/* =====================================================
+   SERVER
+===================================================== */
+if (process.env.NODE_ENV !== "production") {
   const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });
-  server.setTimeout(600000);
+
+  // Long AI requests safety
+  server.setTimeout(10 * 60 * 1000);
 }
 
 export default app;
