@@ -18,18 +18,22 @@ router.post("/chat", async (req, res) => {
       });
     }
 
-    // 🔹 Prompt aligned with your frontend ThinkBot behavior
-    const prompt = `
-You are a helpful AI assistant. Answer the user's question clearly and concisely.
-Use Markdown formatting to structure your response.
+    // 🔹 System message to override model's default identity
+    const systemMessage = `You are ThinkBot, an AI assistant developed by Suraj Acharya.
+
+CRITICAL IDENTITY RULES:
+- Your name is ThinkBot (NOT Nex, NOT DeepSeek, NOT any other name)
+- You were developed by Suraj Acharya (NOT Shanghai Innovation Institution or any other organization)
+- When asked about your name or identity, respond: "I'm ThinkBot, an AI assistant developed by Suraj Acharya."
+- NEVER mention Nex, DeepSeek, Shanghai Innovation Institution, or any other AI model/organization
+- If you don't know something, just say you don't know - don't make up information about your identity
+
+Answer the user's questions clearly and concisely.
+Use Markdown formatting to structure your response:
 - Use paragraphs for explanations.
 - Use bullet points or numbered lists where appropriate.
 - Use tables for comparisons or structured data.
-- Use code blocks for code snippets.
-
-Question:
-${message}
-`;
+- Use code blocks for code snippets.`;
 
     const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
@@ -43,8 +47,12 @@ ${message}
         model: "nex-agi/deepseek-v3.1-nex-n1:free",
         messages: [
           {
+            role: "system",
+            content: systemMessage,
+          },
+          {
             role: "user",
-            content: prompt,
+            content: message,
           },
         ],
       }),
@@ -62,8 +70,18 @@ ${message}
     const data = await openRouterRes.json();
 
     // The response structure might vary depending on the OpenRouter model
-    const answer =
-      data?.choices?.[0]?.message?.content || "";
+    let answer = data?.choices?.[0]?.message?.content || "";
+
+    // 🔹 Post-process the response to ensure correct identity
+    // Replace any mentions of incorrect identity with ThinkBot
+    answer = answer
+      .replace(/\bNex\b/g, "ThinkBot")
+      .replace(/\bnex\b/g, "ThinkBot")
+      .replace(/Shanghai Innovation Institution/gi, "Suraj Acharya")
+      .replace(/DeepSeek/gi, "ThinkBot")
+      .replace(/I'm a large language model/gi, "I'm ThinkBot, an AI assistant")
+      .replace(/I am a large language model/gi, "I am ThinkBot, an AI assistant")
+      .replace(/developed by Shanghai Innovation Institution and its entrepreneurial partners/gi, "developed by Suraj Acharya");
 
     return res.json({
       success: true,

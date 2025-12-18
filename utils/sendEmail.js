@@ -4,7 +4,7 @@ dotenv.config();
 
 const sendEmail = async (email, subject, text, html) => {
     try {
-        const host = process.env.SMTP_HOST.includes('@') ? 'smtp.gmail.com' : process.env.SMTP_HOST;
+        const host = process.env.SMTP_HOST.includes('@') ? 'bct2080@gmail.com' : process.env.SMTP_HOST;
         const port = parseInt(process.env.SMTP_PORT || '587');
         const secure = port === 465;
 
@@ -13,8 +13,8 @@ const sendEmail = async (email, subject, text, html) => {
             host: host,
             port: port,
             secure: secure,
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS ? "****" : "MISSING"
+            user: process.env.SMTP_USER ? "bct2080@gmail.com" : "MISSING",
+            pass: process.env.SMTP_PASS ? "fbaimcytfzrmscxx" : "MISSING"
         });
 
         const transporter = nodemailer.createTransport({
@@ -22,15 +22,15 @@ const sendEmail = async (email, subject, text, html) => {
             port: port,
             secure: secure,
             auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
+                user: process.env.SMTP_USER ? "bct2080@gmail.com" : "MISSING",
+                pass: process.env.SMTP_PASS ? "fbaimcytfzrmscxx" : "MISSING",
             },
         });
 
         console.log(`Sending email to: ${email}`);
 
         const mailOptions = {
-            from: `"AI Insight" <${process.env.SMTP_USER}>`, // Add a nice sender name
+            from: `"AI Insight" <${process.env.SMTP_USER ? "bct2080@gmail.com" : "MISSING"}>`, // Add a nice sender name
             to: email,
             subject: subject,
             text: text, // Plain text fallback
