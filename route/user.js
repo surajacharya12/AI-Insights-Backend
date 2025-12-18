@@ -1,7 +1,7 @@
 import express from "express";
-import { usersTable } from "../config/schema.js";
+import { usersTable, coursesTable, enrollmentsTable, quizHistoryTable, userPdfsTable } from "../config/schema.js";
 import db from "../config/db.js";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import bcrypt from "bcrypt";
 import { upload } from "../config/cloudinary.js";
 import sendEmail from "../utils/sendEmail.js";
@@ -292,8 +292,43 @@ router.put("/:id/password", async (req, res) => {
 
 router.delete("/:id", async (req, res) => {
     const { id } = req.params;
-    const user = await db.delete(usersTable).where(eq(usersTable.id, id)).returning();
-    res.json(user);
+    try {
+        // 1. Get user email first (needed for related tables)
+        const userResult = await db.select().from(usersTable).where(eq(usersTable.id, id));
+        if (userResult.length === 0) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        const userEmail = userResult[0].email;
+
+        // 2. Find all courses created by this user to delete their enrollments
+        const userCourses = await db.select({ cid: coursesTable.cid }).from(coursesTable).where(eq(coursesTable.userEmail, userEmail));
+        const courseCids = userCourses.map(c => c.cid);
+
+        // 3. Delete all enrollments in those courses (even if by other users)
+        if (courseCids.length > 0) {
+            await db.delete(enrollmentsTable).where(inArray(enrollmentsTable.courseId, courseCids));
+        }
+
+        // 4. Delete user's own related records
+        await db.delete(enrollmentsTable).where(eq(enrollmentsTable.userEmail, userEmail));
+        await db.delete(quizHistoryTable).where(eq(quizHistoryTable.userEmail, userEmail));
+        await db.delete(userPdfsTable).where(eq(userPdfsTable.userEmail, userEmail));
+
+        // 5. Delete courses created by this user
+        await db.delete(coursesTable).where(eq(coursesTable.userEmail, userEmail));
+
+        // 6. Finally delete the user
+        const deletedUser = await db.delete(usersTable).where(eq(usersTable.id, id)).returning();
+
+        res.json({ message: "Account deleted successfully", user: deletedUser[0] });
+    } catch (error) {
+        console.error("Error deleting user account:", error);
+        res.status(500).json({
+            success: false,
+            error: "Failed to delete account. There may be related data preventing deletion.",
+            details: error.message
+        });
+    }
 });
 
 export default router;    
