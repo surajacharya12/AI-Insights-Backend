@@ -13,6 +13,7 @@ import generateQuizRouter from "./route/generate-quiz.js";
 import chatpdfRouter from "./route/chatpdf.js";
 import resourcesRouter from "./route/resources.js";
 import courseProgressRouter from "./route/course-progress.js";
+import summarizeRoute from "./route/summarize.js";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -47,6 +48,8 @@ app.use("/api/generate-quiz", generateQuizRouter);
 app.use("/api/chatpdf", chatpdfRouter);
 app.use("/api/resources", resourcesRouter);
 app.use("/api/course-progress", courseProgressRouter);
+app.use("/api", summarizeRoute);
+
 
 /* =====================================================
    ERROR HANDLER (Payload Friendly)
