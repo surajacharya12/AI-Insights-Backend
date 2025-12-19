@@ -26,37 +26,58 @@ router.post("/summarize", async (req, res) => {
 
     try {
         console.log(`Analyzing video: ${videoId}`);
-        const youtube = await Innertube.create();
-        const info = await youtube.getInfo(videoId);
 
-        const title = info.basic_info.title || "";
-        const description = info.basic_info.short_description || "";
-        const keywords = info.basic_info.keywords?.join(", ") || "";
-
+        let title = "";
+        let description = "";
+        let keywords = "";
         let transcriptText = "";
 
-        // Strategy A: Innertube Transcript
+        // 1. Fetch Basic Metadata via oEmbed (High Reliability, hard to block)
         try {
-            const transcriptData = await info.getTranscript();
-            transcriptText = transcriptData.transcript.content.body.initial_segments
-                .map((s) => s.snippet.text)
-                .join(" ");
-            console.log("Innertube transcript fetched.");
+            const oRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`);
+            if (oRes.ok) {
+                const oData = await oRes.json();
+                title = oData.title || "";
+                console.log("oEmbed title fetched:", title);
+            }
         } catch (e) {
-            console.warn("Innertube transcript failed, trying youtube-transcript package...");
+            console.warn("oEmbed fetch failed:", e.message);
+        }
 
-            // Strategy B: youtube-transcript package
+        // 2. Try Innertube for deep metadata and transcript
+        try {
+            const youtube = await Innertube.create();
+            const info = await youtube.getInfo(videoId);
+
+            title = title || info.basic_info.title || "";
+            description = info.basic_info.short_description || info.basic_info.description || "";
+            keywords = info.basic_info.keywords?.join(", ") || "";
+
+            try {
+                const transcriptData = await info.getTranscript();
+                transcriptText = transcriptData.transcript.content.body.initial_segments
+                    .map((s) => s.snippet.text)
+                    .join(" ");
+                console.log("Innertube transcript fetched.");
+            } catch (te) {
+                console.warn("Innertube transcript failed:", te.message);
+            }
+        } catch (ie) {
+            console.error("Innertube info fetch failed:", ie.message);
+        }
+
+        // 3. Fallback: Try youtube-transcript package if still no transcript
+        if (!transcriptText) {
             try {
                 const manualTranscript = await YoutubeTranscript.fetchTranscript(videoId);
                 transcriptText = manualTranscript.map(t => t.text).join(" ");
                 console.log("youtube-transcript package fetched successfully.");
-            } catch (e2) {
-                console.warn("All transcript methods failed.");
+            } catch (te) {
+                console.warn("youtube-transcript package failed:", te.message);
             }
         }
 
         // Construct the final data for AI
-        // Even if transcript is missing, we use title + description
         const fullText = `
 VIDEO TITLE: ${title}
 KEYWORDS: ${keywords}
@@ -64,8 +85,9 @@ VIDEO DESCRIPTION: ${description}
 TRANSCRIPT: ${transcriptText || "No transcript available"}
         `.trim().slice(0, 15000);
 
-        if (!transcriptText && (!description || description.length < 10) && (!title || title.length < 15)) {
-            throw new Error("This video provides no transcript and almost no metadata (title/description) to analyze.");
+        // Relaxed validation: as long as we have SOME content to work with
+        if (!transcriptText && (!description || description.length < 5) && (!title || title.length < 5)) {
+            throw new Error("YouTube blocked metadata extraction on this server. Please try again with a different video link.");
         }
 
         // 3. Summarize using OpenRouter (reasoning enabled)
