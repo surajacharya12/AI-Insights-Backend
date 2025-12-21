@@ -6,6 +6,18 @@ import { uploadResource } from "../config/cloudinary.js";
 
 const router = express.Router();
 
+const uploadWithLimit = (req, res, next) => {
+    uploadResource.single('file')(req, res, (err) => {
+        if (err) {
+            if (err.code === 'LIMIT_FILE_SIZE') {
+                return res.status(400).json({ error: "File size exceeds the limit of 10MB" });
+            }
+            return res.status(400).json({ error: err.message });
+        }
+        next();
+    });
+};
+
 // Get all resources
 router.get("/", async (req, res) => {
     try {
@@ -18,7 +30,7 @@ router.get("/", async (req, res) => {
 });
 
 // Upload a new resource
-router.post("/", uploadResource.single('file'), async (req, res) => {
+router.post("/", uploadWithLimit, async (req, res) => {
     try {
         const { topic, description, authorName, authorEmail } = req.body;
 
