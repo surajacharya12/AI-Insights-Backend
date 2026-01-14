@@ -1,10 +1,24 @@
 import express from "express";
+import { OpenRouter } from "@openrouter/sdk";
 
 const router = express.Router();
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_THINK_BOT; // Add your OpenRouter API key here
-const SITE_URL = process.env.SITE_URL || "http://localhost:3000"; // optional
-const SITE_NAME = process.env.SITE_NAME || "ThinkBot"; // optional
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_THINK_BOT;
+const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
+const SITE_NAME = process.env.SITE_NAME || "ThinkBot";
+
+// Validate API key exists
+if (!OPENROUTER_API_KEY) {
+  console.error("❌ OPENROUTER_API_KEY_THINK_BOT is not set in environment variables");
+}
+
+const openrouter = new OpenRouter({
+  apiKey: OPENROUTER_API_KEY,
+  defaultHeaders: {
+    "HTTP-Referer": SITE_URL,
+    "X-Title": SITE_NAME,
+  },
+});
 
 // POST /api/chat
 router.post("/chat", async (req, res) => {
@@ -15,6 +29,15 @@ router.post("/chat", async (req, res) => {
       return res.status(400).json({
         success: false,
         error: "Message is required",
+      });
+    }
+
+    // Check if API key is configured
+    if (!OPENROUTER_API_KEY) {
+      return res.status(500).json({
+        success: false,
+        error: "ThinkBot is not configured. Please contact the administrator.",
+        details: "Missing API key configuration",
       });
     }
 
@@ -35,74 +58,84 @@ Use Markdown formatting to structure your response:
 - Use tables for comparisons or structured data.
 - Use code blocks for code snippets.`;
 
-    const openRouterRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": SITE_URL,
-        "X-Title": SITE_NAME,
-        "Content-Type": "application/json",
+    // 🔹 Stream internally
+    const stream = await openrouter.chat.send({
+      model: "openai/gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemMessage },
+        { role: "user", content: message },
+      ],
+      stream: true,
+      streamOptions: {
+        includeUsage: true,
       },
-      body: JSON.stringify({
-        model: "nex-agi/deepseek-v3.1-nex-n1:free",
-        messages: [
-          {
-            role: "system",
-            content: systemMessage,
-          },
-          {
-            role: "user",
-            content: message,
-          },
-        ],
-      }),
     });
 
-    if (!openRouterRes.ok) {
-      const errText = await openRouterRes.text();
-      return res.status(openRouterRes.status).json({
-        success: false,
-        error: "OpenRouter API error",
-        details: errText,
-      });
+    let answer = "";
+
+    for await (const chunk of stream) {
+      const content = chunk.choices?.[0]?.delta?.content;
+      if (content) {
+        answer += content;
+      }
     }
 
-    const data = await openRouterRes.json();
-
-    // The response structure might vary depending on the OpenRouter model
-    let answer = data?.choices?.[0]?.message?.content || "";
-
-    // 🔹 Post-process the response to ensure correct identity
-    // Replace any mentions of incorrect identity with ThinkBot
+    // 🔹 Post-process identity safety
     answer = answer
-      .replace(/\bNex\b/g, "ThinkBot")
-      .replace(/\bnex\b/g, "ThinkBot")
+      .replace(/\bNex\b/gi, "ThinkBot")
+      .replace(/\bDeepSeek\b/gi, "ThinkBot")
       .replace(/Shanghai Innovation Institution/gi, "Suraj Acharya")
-      .replace(/DeepSeek/gi, "ThinkBot")
       .replace(/I'm a large language model/gi, "I'm ThinkBot, an AI assistant")
-      .replace(/I am a large language model/gi, "I am ThinkBot, an AI assistant")
-      .replace(/developed by Shanghai Innovation Institution and its entrepreneurial partners/gi, "developed by Suraj Acharya");
+      .replace(/I am a large language model/gi, "I am ThinkBot, an AI assistant");
 
     return res.json({
       success: true,
-      data: {
-        answer,
-      },
+      data: { answer },
     });
+
   } catch (error) {
     console.error("ThinkBot Error:", error);
 
-    if (error.message?.includes("429")) {
-      return res.status(429).json({
+    // Handle insufficient credits
+    if (error.statusCode === 402) {
+      return res.status(402).json({
         success: false,
-        error: "Quota exceeded. Please try again later.",
+        error: "ThinkBot credits exhausted. Please purchase more credits at https://openrouter.ai/settings/credits or contact the administrator.",
+        details: "Insufficient credits for the selected model",
       });
     }
 
-    res.status(500).json({
+    // Handle rate limiting
+    if (error.message?.includes("429") || error.status === 429) {
+      return res.status(429).json({
+        success: false,
+        error: "Rate limit exceeded. Please try again later.",
+      });
+    }
+
+    // Handle authentication errors
+    if (error.message?.includes("401") || error.status === 401) {
+      return res.status(500).json({
+        success: false,
+        error: "ThinkBot authentication failed. Please contact the administrator.",
+        details: "Invalid API key",
+      });
+    }
+
+    // Handle network errors
+    if (error.code === "ECONNREFUSED" || error.code === "ENOTFOUND") {
+      return res.status(503).json({
+        success: false,
+        error: "ThinkBot service is temporarily unavailable. Please try again later.",
+        details: "Network connection error",
+      });
+    }
+
+    // Generic error handler
+    return res.status(500).json({
       success: false,
-      error: "Failed to generate AI response",
-      details: error.message,
+      error: "Failed to generate AI response. Please try again.",
+      details: error.message || "Unknown error occurred",
     });
   }
 });
