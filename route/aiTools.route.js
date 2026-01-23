@@ -127,7 +127,7 @@ router.post("/image-to-text", async (req, res) => {
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY_COURSE}`,
+          Authorization: `Bearer ${process.env.OPENROUTER_API_KEY_CONTENT}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
