@@ -1,0 +1,8 @@
+ignoredBuiltDependencies:
+  - bcrypt
+  - canvas
+  - core-js
+  - es5-ext
+  - esbuild
+  - protobufjs
+  - sharp

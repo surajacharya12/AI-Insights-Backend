@@ -69,13 +69,14 @@ app.use((err, req, res, next) => {
 /* =====================================================
    SERVER
 ===================================================== */
-if (process.env.NODE_ENV !== "production") {
-  const server = app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
+/* =====================================================
+   SERVER
+===================================================== */
+const server = app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
 
-  // Long AI requests safety
-  server.setTimeout(10 * 60 * 1000);
-}
+// Long AI requests safety
+server.setTimeout(10 * 60 * 1000);
 
 export default app;

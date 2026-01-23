@@ -47,7 +47,7 @@ const GetYoutubeVideo = async (query) => {
    OPENROUTER STREAMING MODEL
 ===================================================== */
 const openrouter = new OpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY_CONTENT,
+  apiKey: process.env.OPENROUTER_API_KEY_COURSE,
 });
 
 const callOpenRouterStreaming = async (prompt, previousMessages = []) => {

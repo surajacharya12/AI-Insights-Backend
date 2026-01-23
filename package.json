@@ -37,5 +37,12 @@
     "drizzle-kit": "^0.31.8",
     "nodemon": "^3.1.11",
     "tsx": "^4.21.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "canvas",
+      "sharp",
+      "bcrypt"
+    ]
   }
 }

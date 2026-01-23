@@ -17,15 +17,6 @@ router.get("/", async (req, res) => {
             let result = await db
                 .select()
                 .from(coursesTable)
-                .where(
-                    and(
-                        // Check if courseContent is not null and not empty JSON objects/arrays
-                        sql`${coursesTable.courseContent} IS NOT NULL`,
-                        sql`${coursesTable.courseContent}::text != '{}'`,
-                        sql`${coursesTable.courseContent}::text != '[]'`,
-                        sql`${coursesTable.courseContent}::text != 'null'`
-                    )
-                )
                 .orderBy(desc(coursesTable.id));
 
             if (searchQuery) {
@@ -33,7 +24,7 @@ router.get("/", async (req, res) => {
                     (course.name?.toLowerCase() || "").includes(searchQuery)
                 );
             }
-            console.log("Fetched generated courses (filtered):", result.length);
+            console.log("Fetched courses (all):", result.length);
             return res.json(result);
         }
 
@@ -45,17 +36,13 @@ router.get("/", async (req, res) => {
                 .where(eq(coursesTable.cid, courseId));
 
             console.log("Fetched course by ID:", result.length);
-            return res.json(result[0]);
+            return res.json(result[0] || null);
         }
 
         // Case 3: Get courses by current user
-        // We expect userId to be passed from frontend. 
-        // If not, we can't identify the user in this stateless request without auth middleware.
-
         let userEmail = null;
 
         if (userId) {
-            // Fetch user email from usersTable using userId
             const dbUser = await db
                 .select()
                 .from(usersTable)
@@ -67,8 +54,8 @@ router.get("/", async (req, res) => {
         }
 
         if (!userEmail) {
-            // If we couldn't find the user or userId wasn't provided
-            return res.status(400).json({ error: "User ID is required to fetch user courses" });
+            console.log("No user email found for ID:", userId);
+            return res.json([]); // Return empty array instead of 400
         }
 
         const result = await db
