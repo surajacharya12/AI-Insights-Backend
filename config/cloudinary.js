@@ -3,47 +3,59 @@ import { v2 as cloudinary } from 'cloudinary';
 import { CloudinaryStorage } from 'multer-storage-cloudinary';
 import multer from 'multer';
 
+// -----------------------------
 // Configure Cloudinary
+// -----------------------------
 cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true, // ensures https URLs
 });
 
-// Configure Cloudinary storage for multer
-const storage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'aiinsight/profile-photos',
-        allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
-        transformation: [{ width: 500, height: 500, crop: 'limit' }]
-    }
+// -----------------------------
+// Image Upload Storage (e.g., profile photos, thumbnails)
+// -----------------------------
+const imageStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'aiinsight/images', // main folder for all images
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+    transformation: [
+      { width: 1024, height: 1024, crop: 'limit' }, // default resize
+    ],
+  },
 });
 
-// Create multer upload middleware
+// Multer middleware for image uploads
 const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
-    }
+  storage: imageStorage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB max
+  },
 });
 
-// Configure Cloudinary storage for resources (PDFs)
+// -----------------------------
+// Resource Upload Storage (e.g., PDFs, docs)
+// -----------------------------
 const resourceStorage = new CloudinaryStorage({
-    cloudinary: cloudinary,
-    params: {
-        folder: 'aiinsight/resources',
-        allowed_formats: ['pdf'],
-        resource_type: 'raw' // Important for non-image files like PDFs
-    }
+  cloudinary: cloudinary,
+  params: {
+    folder: 'aiinsight/resources',
+    allowed_formats: ['pdf', 'docx', 'txt'],
+    resource_type: 'raw', // non-image files
+  },
 });
 
-// Create multer upload middleware for resources
+// Multer middleware for resources
 const uploadResource = multer({
-    storage: resourceStorage,
-    limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit
-    }
+  storage: resourceStorage,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB max
+  },
 });
 
+// -----------------------------
+// Export Cloudinary + Multer
+// -----------------------------
 export { cloudinary, upload, uploadResource };

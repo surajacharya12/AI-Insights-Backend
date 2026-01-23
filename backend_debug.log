@@ -1,0 +1,249 @@
+2026-01-21T11:38:52.827Z - Incoming Prompt: my first day as a nurse
+2026-01-21T11:38:52.829Z - Incoming File: thumbnail.png
+2026-01-21T11:38:52.829Z - File Size: 69784 bytes
+2026-01-21T11:38:59.630Z - Incoming Prompt: my first day as a nurse
+2026-01-21T11:38:59.632Z - Incoming File: thumbnail.png
+2026-01-21T11:38:59.632Z - File Size: 69784 bytes
+2026-01-21T11:38:59.633Z - Sending request to Stability AI...
+2026-01-21T11:39:00.382Z - Stability AI Error (400): {"id":"7aed1102b20a3d46651c93093563d063","message":"for stable-diffusion-xl-1024-v0-9 and stable-diffusion-xl-1024-v1-0 the allowed dimensions are 1024x1024, 1152x896, 1216x832, 1344x768, 1536x640, 640x1536, 768x1344, 832x1216, 896x1152, but we received 1080x1080","name":"invalid_sdxl_v1_dimensions"}
+
+2026-01-21T11:39:45.139Z - Incoming Prompt: my first day as a nurse
+2026-01-21T11:39:45.142Z - Incoming File: thumbnail.png
+2026-01-21T11:39:45.142Z - File Size: 69784 bytes
+2026-01-21T11:39:45.142Z - Resizing image to 1024x1024 for SDXL...
+2026-01-21T11:39:45.143Z - Resize Error: Unsupported image type
+2026-01-21T11:39:56.917Z - Incoming Prompt: my first day as a nurse
+2026-01-21T11:39:56.918Z - Incoming File: thumbnail.png
+2026-01-21T11:39:56.919Z - File Size: 69784 bytes
+2026-01-21T11:39:56.919Z - Resizing image to 1024x1024 for SDXL...
+2026-01-21T11:39:56.919Z - Resize Error: Unsupported image type
+2026-01-21T11:40:08.465Z - Incoming Prompt: my first day as a nurse
+2026-01-21T11:40:08.466Z - Incoming File: thumbnail.png
+2026-01-21T11:40:08.466Z - File Size: 69784 bytes
+2026-01-21T11:40:08.466Z - Resizing image to 1344x768 for SDXL...
+2026-01-21T11:40:08.467Z - Resize Error: Unsupported image type
+2026-01-22T10:05:18.543Z - Incoming Prompt: create a thumbnaills on my first day as a nurse
+
+2026-01-22T10:05:18.545Z - Incoming File: thumbnail.png
+2026-01-22T10:05:18.545Z - File Size: 69784 bytes
+2026-01-22T10:05:18.545Z - Resizing image to 1344x768...
+2026-01-22T10:05:18.546Z - Resize Error: Unsupported image type
+2026-01-22T10:05:22.495Z - Incoming Prompt: create a thumbnaills on my first day as a nurse
+
+2026-01-22T10:05:22.495Z - Incoming File: thumbnail.png
+2026-01-22T10:05:22.495Z - File Size: 69784 bytes
+2026-01-22T10:05:22.495Z - Resizing image to 1344x768...
+2026-01-22T10:05:22.495Z - Resize Error: Unsupported image type
+2026-01-22T10:05:22.932Z - Incoming Prompt: create a thumbnaills on my first day as a nurse
+
+2026-01-22T10:05:22.932Z - Incoming File: thumbnail.png
+2026-01-22T10:05:22.933Z - File Size: 69784 bytes
+2026-01-22T10:05:22.933Z - Resizing image to 1344x768...
+2026-01-22T10:05:22.933Z - Resize Error: Unsupported image type
+2026-01-22T10:05:23.114Z - Incoming Prompt: create a thumbnaills on my first day as a nurse
+
+2026-01-22T10:05:23.115Z - Incoming File: thumbnail.png
+2026-01-22T10:05:23.115Z - File Size: 69784 bytes
+2026-01-22T10:05:23.115Z - Resizing image to 1344x768...
+2026-01-22T10:05:23.115Z - Resize Error: Unsupported image type
+2026-01-22T10:05:23.519Z - Incoming Prompt: create a thumbnaills on my first day as a nurse
+
+2026-01-22T10:05:23.520Z - Incoming File: thumbnail.png
+2026-01-22T10:05:23.520Z - File Size: 69784 bytes
+2026-01-22T10:05:23.520Z - Resizing image to 1344x768...
+2026-01-22T10:05:23.520Z - Resize Error: Unsupported image type
+2026-01-22T10:07:38.700Z - Unsupported image type
+2026-01-22T10:11:22.484Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:11:22.486Z - Incoming File: thumbnail.png
+2026-01-22T10:11:22.486Z - File Size: 69784 bytes
+2026-01-22T10:11:22.486Z - Resizing image to 1344x768...
+2026-01-22T10:11:22.487Z - Resize Error: Unsupported image type
+2026-01-22T10:14:20.136Z - === NEW REQUEST ===
+2026-01-22T10:14:20.138Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryq0A51uJZbYhCbuUI","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:20.138Z - Request body keys: prompt
+2026-01-22T10:14:20.138Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:20.138Z - Incoming File: thumbnail.png
+2026-01-22T10:14:20.138Z - File Size: 69784 bytes
+2026-01-22T10:14:20.138Z - Resizing image to 1344x768...
+2026-01-22T10:14:20.138Z - Resize Error: Unsupported image type
+2026-01-22T10:14:20.662Z - === NEW REQUEST ===
+2026-01-22T10:14:20.662Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryjV5GF5VfQFGULMk0","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:20.662Z - Request body keys: prompt
+2026-01-22T10:14:20.663Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:20.663Z - Incoming File: thumbnail.png
+2026-01-22T10:14:20.663Z - File Size: 69784 bytes
+2026-01-22T10:14:20.663Z - Resizing image to 1344x768...
+2026-01-22T10:14:20.663Z - Resize Error: Unsupported image type
+2026-01-22T10:14:28.797Z - === NEW REQUEST ===
+2026-01-22T10:14:28.797Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryalxS3pDXWah8R7vM","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:28.797Z - Request body keys: prompt
+2026-01-22T10:14:28.797Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:28.798Z - Incoming File: thumbnail.png
+2026-01-22T10:14:28.798Z - File Size: 69784 bytes
+2026-01-22T10:14:28.798Z - Resizing image to 1344x768...
+2026-01-22T10:14:28.798Z - Resize Error: Unsupported image type
+2026-01-22T10:14:29.061Z - === NEW REQUEST ===
+2026-01-22T10:14:29.061Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryG1ghipgSPvZjvh56","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:29.062Z - Request body keys: prompt
+2026-01-22T10:14:29.062Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:29.062Z - Incoming File: thumbnail.png
+2026-01-22T10:14:29.062Z - File Size: 69784 bytes
+2026-01-22T10:14:29.062Z - Resizing image to 1344x768...
+2026-01-22T10:14:29.062Z - Resize Error: Unsupported image type
+2026-01-22T10:14:29.261Z - === NEW REQUEST ===
+2026-01-22T10:14:29.261Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryqKVFuWGU6LWVkMY7","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:29.262Z - Request body keys: prompt
+2026-01-22T10:14:29.262Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:29.262Z - Incoming File: thumbnail.png
+2026-01-22T10:14:29.262Z - File Size: 69784 bytes
+2026-01-22T10:14:29.262Z - Resizing image to 1344x768...
+2026-01-22T10:14:29.262Z - Resize Error: Unsupported image type
+2026-01-22T10:14:29.494Z - === NEW REQUEST ===
+2026-01-22T10:14:29.494Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundary4OVGv6nRZj0xZK54","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:29.494Z - Request body keys: prompt
+2026-01-22T10:14:29.495Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:29.495Z - Incoming File: thumbnail.png
+2026-01-22T10:14:29.495Z - File Size: 69784 bytes
+2026-01-22T10:14:29.495Z - Resizing image to 1344x768...
+2026-01-22T10:14:29.495Z - Resize Error: Unsupported image type
+2026-01-22T10:14:29.696Z - === NEW REQUEST ===
+2026-01-22T10:14:29.696Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundary1l4Wb5jOLcI3IXvA","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:29.696Z - Request body keys: prompt
+2026-01-22T10:14:29.696Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:29.696Z - Incoming File: thumbnail.png
+2026-01-22T10:14:29.697Z - File Size: 69784 bytes
+2026-01-22T10:14:29.697Z - Resizing image to 1344x768...
+2026-01-22T10:14:29.697Z - Resize Error: Unsupported image type
+2026-01-22T10:14:29.962Z - === NEW REQUEST ===
+2026-01-22T10:14:29.962Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundary5fmv69foa0GJdVID","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:29.962Z - Request body keys: prompt
+2026-01-22T10:14:29.962Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:29.962Z - Incoming File: thumbnail.png
+2026-01-22T10:14:29.962Z - File Size: 69784 bytes
+2026-01-22T10:14:29.962Z - Resizing image to 1344x768...
+2026-01-22T10:14:29.963Z - Resize Error: Unsupported image type
+2026-01-22T10:14:38.319Z - === NEW REQUEST ===
+2026-01-22T10:14:38.320Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryuHbZ2aHEqmXpMstX","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:38.320Z - Request body keys: prompt
+2026-01-22T10:14:38.320Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:38.320Z - Incoming File: thumbnail.png
+2026-01-22T10:14:38.320Z - File Size: 69784 bytes
+2026-01-22T10:14:38.321Z - Resizing image to 1344x768...
+2026-01-22T10:14:38.321Z - Resize Error: Unsupported image type
+2026-01-22T10:14:45.365Z - === NEW REQUEST ===
+2026-01-22T10:14:45.366Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryk8S4YzVBjf2EinMv","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:14:45.366Z - Request body keys: prompt
+2026-01-22T10:14:45.366Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:14:45.366Z - Incoming File: thumbnail.png
+2026-01-22T10:14:45.366Z - File Size: 69784 bytes
+2026-01-22T10:14:45.366Z - Resizing image to 1344x768...
+2026-01-22T10:14:45.367Z - Resize Error: Unsupported image type
+2026-01-22T10:16:57.010Z - === NEW REQUEST ===
+2026-01-22T10:16:57.013Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundary3NiIiDMrRms4Ozv7","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:16:57.014Z - Request body keys: prompt
+2026-01-22T10:16:57.014Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:16:57.014Z - Incoming File: thumbnail.png
+2026-01-22T10:16:57.014Z - File Size: 69784 bytes
+2026-01-22T10:16:57.014Z - Resizing image to 1344x768...
+2026-01-22T10:16:57.014Z - Buffer size: 69784 bytes
+2026-01-22T10:16:57.014Z - Resize Error: Unsupported image type
+2026-01-22T10:16:57.015Z - Error Stack: Error: Unsupported image type
+    at setSource (/Users/suraj/development/aiinsight/aiinsight_backend/node_modules/canvas/lib/image.js:95:13)
+    at Image.set (/Users/suraj/development/aiinsight/aiinsight_backend/node_modules/canvas/lib/image.js:65:7)
+    at /Users/suraj/development/aiinsight/aiinsight_backend/node_modules/canvas/index.js:35:15
+    at new Promise (<anonymous>)
+    at loadImage (/Users/suraj/development/aiinsight/aiinsight_backend/node_modules/canvas/index.js:24:10)
+    at file:///Users/suraj/development/aiinsight/aiinsight_backend/route/thumnaills.js:55:25
+    at Layer.handleRequest (/Users/suraj/development/aiinsight/aiinsight_backend/node_modules/router/lib/layer.js:152:17)
+    at next (/Users/suraj/development/aiinsight/aiinsight_backend/node_modules/router/lib/route.js:157:13)
+    at done (/Users/suraj/development/aiinsight/aiinsight_backend/node_modules/multer/lib/make-middleware.js:59:7)
+    at indicateDone (/Users/suraj/development/aiinsight/aiinsight_backend/node_modules/multer/lib/make-middleware.js:63:68)
+2026-01-22T10:18:19.794Z - === NEW REQUEST ===
+2026-01-22T10:18:19.796Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryrzzIof5DrimQbEEk","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:18:19.796Z - Request body keys: prompt
+2026-01-22T10:18:19.796Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:18:19.796Z - Incoming File: thumbnail.png
+2026-01-22T10:18:19.796Z - File Size: 69784 bytes
+2026-01-22T10:18:19.796Z - File MIME Type: image/webp
+2026-01-22T10:18:19.796Z - Resizing image to 1344x768 using sharp...
+2026-01-22T10:18:19.835Z - Image resized successfully. New size: 946021 bytes
+2026-01-22T10:18:19.835Z - Base64 image length: 1261364 characters
+2026-01-22T10:18:19.836Z - Sending request to StableDiffusionAPI...
+2026-01-22T10:18:23.338Z - Fatal Error: Unexpected token '<', "<html>
+<h"... is not valid JSON
+2026-01-22T10:18:23.338Z - Error Stack: SyntaxError: Unexpected token '<', "<html>
+<h"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at parseJSONFromBytes (node:internal/deps/undici/undici:5738:19)
+    at successSteps (node:internal/deps/undici/undici:5719:27)
+    at fullyReadBody (node:internal/deps/undici/undici:4609:9)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async consumeBody (node:internal/deps/undici/undici:5728:7)
+    at async file:///Users/suraj/development/aiinsight/aiinsight_backend/route/thumnaills.js:110:26
+2026-01-22T10:27:30.248Z - === NEW REQUEST ===
+2026-01-22T10:27:30.250Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundarydCyXJ7mzvnM3HFng","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:27:30.250Z - Request body keys: prompt
+2026-01-22T10:27:30.250Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:27:30.250Z - Incoming File: thumbnail.png
+2026-01-22T10:27:30.250Z - File Size: 69784 bytes
+2026-01-22T10:27:30.250Z - File MIME Type: image/webp
+2026-01-22T10:27:30.250Z - Resizing image to 1024x768 using sharp...
+2026-01-22T10:27:30.282Z - Image resized successfully. New size: 99661 bytes
+2026-01-22T10:27:30.282Z - Uploading image to Cloudinary...
+2026-01-22T10:27:33.968Z - Image uploaded to Cloudinary: https://res.cloudinary.com/dl5ruew3a/image/upload/v1769077653/thumbnails/rslzxz2cyjhlqc6v8zxx.jpg
+2026-01-22T10:27:33.968Z - Sending request to Together AI FLUX model...
+2026-01-22T10:27:34.699Z - Together AI Error: 401 {"id":"oUJLPyY-2kFHot-9c1e5c0beec2bd45-PDX","error":{"message":"Invalid API key provided. You can find your API key at https://api.together.ai/settings/api-keys.","type":"invalid_request_error","param":null,"code":"invalid_api_key"}}
+2026-01-22T10:27:34.700Z - Error Stack: Error: 401 {"id":"oUJLPyY-2kFHot-9c1e5c0beec2bd45-PDX","error":{"message":"Invalid API key provided. You can find your API key at https://api.together.ai/settings/api-keys.","type":"invalid_request_error","param":null,"code":"invalid_api_key"}}
+    at APIError.generate (file:///Users/suraj/development/aiinsight/aiinsight_backend/node_modules/together-ai/core/error.mjs:39:20)
+    at Together.makeStatusError (file:///Users/suraj/development/aiinsight/aiinsight_backend/node_modules/together-ai/client.mjs:147:32)
+    at Together.makeRequest (file:///Users/suraj/development/aiinsight/aiinsight_backend/node_modules/together-ai/client.mjs:288:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///Users/suraj/development/aiinsight/aiinsight_backend/route/thumnaills.js:116:24
+2026-01-22T10:28:04.467Z - === NEW REQUEST ===
+2026-01-22T10:28:04.468Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryZK1UF7obSOt68jld","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:28:04.468Z - Request body keys: prompt
+2026-01-22T10:28:04.468Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:28:04.468Z - Incoming File: thumbnail.png
+2026-01-22T10:28:04.468Z - File Size: 69784 bytes
+2026-01-22T10:28:04.468Z - File MIME Type: image/webp
+2026-01-22T10:28:04.468Z - Resizing image to 1024x768 using sharp...
+2026-01-22T10:28:04.505Z - Image resized successfully. New size: 99661 bytes
+2026-01-22T10:28:04.505Z - Uploading image to Cloudinary...
+2026-01-22T10:28:07.855Z - Image uploaded to Cloudinary: https://res.cloudinary.com/dl5ruew3a/image/upload/v1769077687/thumbnails/o8pf490kyo1yt6avwq5o.jpg
+2026-01-22T10:28:07.855Z - Sending request to Together AI FLUX model...
+2026-01-22T10:28:08.226Z - Together AI Error: 401 {"id":"oUJLZwf-2kFHot-9c1e5cdddd697f58-PDX","error":{"message":"Invalid API key provided. You can find your API key at https://api.together.ai/settings/api-keys.","type":"invalid_request_error","param":null,"code":"invalid_api_key"}}
+2026-01-22T10:28:08.226Z - Error Stack: Error: 401 {"id":"oUJLZwf-2kFHot-9c1e5cdddd697f58-PDX","error":{"message":"Invalid API key provided. You can find your API key at https://api.together.ai/settings/api-keys.","type":"invalid_request_error","param":null,"code":"invalid_api_key"}}
+    at APIError.generate (file:///Users/suraj/development/aiinsight/aiinsight_backend/node_modules/together-ai/core/error.mjs:39:20)
+    at Together.makeStatusError (file:///Users/suraj/development/aiinsight/aiinsight_backend/node_modules/together-ai/client.mjs:147:32)
+    at Together.makeRequest (file:///Users/suraj/development/aiinsight/aiinsight_backend/node_modules/together-ai/client.mjs:288:30)
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+    at async file:///Users/suraj/development/aiinsight/aiinsight_backend/route/thumnaills.js:116:24
+2026-01-22T10:28:43.112Z - === NEW REQUEST ===
+2026-01-22T10:28:43.114Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryUuTmCCzS0PbiPFxN","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:28:43.114Z - Request body keys: prompt
+2026-01-22T10:28:43.114Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:28:43.114Z - Incoming File: thumbnail.png
+2026-01-22T10:28:43.114Z - File Size: 69784 bytes
+2026-01-22T10:28:43.114Z - File MIME Type: image/webp
+2026-01-22T10:28:43.114Z - Error: TOGETHER_API_KEY not configured properly
+2026-01-22T10:28:44.821Z - === NEW REQUEST ===
+2026-01-22T10:28:44.821Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundaryLXwtkBecwJLbRRlT","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:28:44.821Z - Request body keys: prompt
+2026-01-22T10:28:44.821Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:28:44.821Z - Incoming File: thumbnail.png
+2026-01-22T10:28:44.821Z - File Size: 69784 bytes
+2026-01-22T10:28:44.822Z - File MIME Type: image/webp
+2026-01-22T10:28:44.822Z - Error: TOGETHER_API_KEY not configured properly
+2026-01-22T10:28:45.529Z - === NEW REQUEST ===
+2026-01-22T10:28:45.529Z - Request headers: {"host":"localhost:3001","connection":"keep-alive","content-length":"70112","sec-ch-ua-platform":"\"macOS\"","user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/143.0.0.0 Safari/537.36","accept":"application/json, text/plain, */*","sec-ch-ua":"\"Brave\";v=\"143\", \"Chromium\";v=\"143\", \"Not A(Brand\";v=\"24\"","content-type":"multipart/form-data; boundary=----WebKitFormBoundary0z5xd88hko0XeCVm","sec-ch-ua-mobile":"?0","sec-gpc":"1","accept-language":"en-GB,en;q=0.9","origin":"http://localhost:3002","sec-fetch-site":"same-site","sec-fetch-mode":"cors","sec-fetch-dest":"empty","referer":"http://localhost:3002/","accept-encoding":"gzip, deflate, br, zstd"}
+2026-01-22T10:28:45.529Z - Request body keys: prompt
+2026-01-22T10:28:45.529Z - Incoming Prompt: create a thiumbnaills on my fist day as a nurse
+2026-01-22T10:28:45.529Z - Incoming File: thumbnail.png
+2026-01-22T10:28:45.529Z - File Size: 69784 bytes
+2026-01-22T10:28:45.529Z - File MIME Type: image/webp
+2026-01-22T10:28:45.529Z - Error: TOGETHER_API_KEY not configured properly
+2026-01-22T11:00:16.133Z - === NEW REQUEST ===
+2026-01-22T11:00:16.986Z - === NEW REQUEST ===
+2026-01-22T11:00:17.817Z - === NEW REQUEST ===
+2026-01-22T11:00:18.553Z - === NEW REQUEST ===
+2026-01-22T11:00:18.955Z - === NEW REQUEST ===
