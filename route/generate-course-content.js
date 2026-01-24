@@ -1,11 +1,18 @@
 import express from "express";
-import { OpenRouter } from "@openrouter/sdk";
 import axios from "axios";
+import { GoogleGenAI } from "@google/genai";
 import db from "../config/db.js";
 import { coursesTable } from "../config/schema.js";
 import { eq } from "drizzle-orm";
 
 const router = express.Router();
+
+/* =====================================================
+   GEMINI INIT
+===================================================== */
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_COURSE,
+});
 
 /* =====================================================
    CONSTANTS
@@ -17,11 +24,21 @@ const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3/search";
 ===================================================== */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+const extractJSON = (text) => {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    throw new Error("Invalid JSON from Gemini");
+  }
+  return text.slice(start, end + 1);
+};
+
 /* =====================================================
    YOUTUBE FETCH
 ===================================================== */
 const GetYoutubeVideo = async (query) => {
   if (!query) return [];
+
   try {
     const params = {
       part: "snippet",
@@ -44,50 +61,22 @@ const GetYoutubeVideo = async (query) => {
 };
 
 /* =====================================================
-   OPENROUTER STREAMING MODEL
+   GEMINI CALL
 ===================================================== */
-const openrouter = new OpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY_COURSE,
-});
+const callGemini = async (prompt) => {
+  const response = await ai.models.generateContent({
+    model: "gemini-flash-latest",
+    contents: prompt,
+  });
 
-const callOpenRouterStreaming = async (prompt, previousMessages = []) => {
-  const messages = [
-    ...previousMessages,
-    { role: "user", content: prompt },
-  ];
+  const text =
+    response.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-  let fullResponse = "";
-
-  try {
-    const stream = await openrouter.chat.send({
-      model: "tngtech/deepseek-r1t2-chimera:free",
-      messages,
-      stream: true,
-      streamOptions: {
-        includeUsage: true,
-      },
-    });
-
-    for await (const chunk of stream) {
-      const content = chunk.choices[0]?.delta?.content;
-      if (content) {
-        fullResponse += content;
-      }
-
-      // Optional: log reasoning tokens when final chunk arrives
-      if (chunk.usage) {
-        console.log("Reasoning tokens:", chunk.usage.reasoningTokens);
-      }
-    }
-
-    return {
-      content: fullResponse,
-      messages,
-    };
-  } catch (err) {
-    console.error("OpenRouter streaming error:", err.message);
-    throw err;
+  if (!text) {
+    throw new Error("Empty response from Gemini");
   }
+
+  return extractJSON(text);
 };
 
 /* =====================================================
@@ -192,7 +181,13 @@ Chapter data:
 `;
 
   try {
-    let { courseJson, courseTitle, courseId, includeVideo: includeVideoFromReq, chapterIndex } = req.body;
+    let {
+      courseJson,
+      courseTitle,
+      courseId,
+      includeVideo: includeVideoFromReq,
+      chapterIndex,
+    } = req.body;
 
     if (!courseId || !courseJson || !courseTitle) {
       return res.status(400).json({
@@ -200,119 +195,81 @@ Chapter data:
       });
     }
 
-    // Defensive: Parse courseJson if it's a string, and handle "course" wrapper
-    try {
-      if (typeof courseJson === "string") {
-        courseJson = JSON.parse(courseJson);
-      }
-      // If it's wrapped in { course: { ... } }, unwrap it
-      if (courseJson.course && !courseJson.chapters) {
-        courseJson = courseJson.course;
-      }
-    } catch (e) {
-      return res.status(400).json({ error: "Invalid courseJson format" });
+    // Parse & unwrap course JSON
+    if (typeof courseJson === "string") {
+      courseJson = JSON.parse(courseJson);
+    }
+    if (courseJson.course) {
+      courseJson = courseJson.course;
     }
 
-    if (!courseJson.chapters || !Array.isArray(courseJson.chapters)) {
-      return res.status(400).json({ error: "courseJson is missing chapters array" });
+    if (!Array.isArray(courseJson.chapters)) {
+      return res.status(400).json({ error: "Invalid chapters array" });
     }
 
-    // Determine if we should include videos (check req or DB)
+    // Resolve includeVideo
     let includeVideo = includeVideoFromReq;
     if (includeVideo === undefined) {
-      try {
-        const courseData = await db.select().from(coursesTable).where(eq(coursesTable.cid, courseId)).limit(1);
-        includeVideo = courseData[0]?.includeVideo ?? false;
-      } catch (err) {
-        includeVideo = false;
-      }
+      const dbCourse = await db
+        .select()
+        .from(coursesTable)
+        .where(eq(coursesTable.cid, courseId))
+        .limit(1);
+
+      includeVideo = dbCourse[0]?.includeVideo ?? false;
     }
 
     let CourseContent = [];
 
-    // If chapterIndex is provided, we are regenerating/generating ONLY that chapter
+    /* ================= SINGLE CHAPTER ================= */
     if (chapterIndex !== undefined && chapterIndex !== null) {
-      const existing = await db.select().from(coursesTable).where(eq(coursesTable.cid, courseId)).limit(1);
-      if (existing.length > 0 && Array.isArray(existing[0].courseContent)) {
-        CourseContent = [...existing[0].courseContent];
-      } else {
-        // Initialize if empty
-        CourseContent = new Array(courseJson.chapters.length).fill({ error: true, message: "Not generated yet" });
-      }
+      const existing = await db
+        .select()
+        .from(coursesTable)
+        .where(eq(coursesTable.cid, courseId))
+        .limit(1);
 
+      CourseContent = existing[0]?.courseContent || [];
       const chapter = courseJson.chapters[chapterIndex];
-      try {
-        const { content: rawAiResponse } = await callOpenRouterStreaming(
-          PROMPT + JSON.stringify(chapter)
-        );
 
-        let cleaned = rawAiResponse.trim();
-        cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-        const firstBrace = cleaned.indexOf("{");
-        const lastBrace = cleaned.lastIndexOf("}");
-        if (firstBrace !== -1 && lastBrace !== -1) {
-          cleaned = cleaned.slice(firstBrace, lastBrace + 1);
-        }
+      const jsonText = await callGemini(
+        PROMPT + JSON.stringify(chapter)
+      );
 
-        const jsonResp = JSON.parse(cleaned);
+      const jsonResp = JSON.parse(jsonText);
 
-        if (Array.isArray(jsonResp.topics)) {
-          for (const topic of jsonResp.topics) {
-            if (includeVideo) {
-              const videos = await GetYoutubeVideo(topic.topic || "");
-              topic.youtubeVideos = videos;
-            } else {
-              topic.youtubeVideos = [];
-            }
-          }
-        }
-
-        CourseContent[chapterIndex] = jsonResp;
-      } catch (err) {
-        console.error("Single Chapter error:", err.message);
-        CourseContent[chapterIndex] = {
-          error: true,
-          chapter: chapter.chapterName || "unknown",
-          message: "Failed to generate content: " + err.message,
-        };
+      for (const topic of jsonResp.topics || []) {
+        topic.youtubeVideos = includeVideo
+          ? await GetYoutubeVideo(topic.topic)
+          : [];
       }
-    } else {
-      // Original behavior: Generate ALL chapters
+
+      CourseContent[chapterIndex] = jsonResp;
+    }
+
+    /* ================= ALL CHAPTERS ================= */
+    else {
       for (const chapter of courseJson.chapters) {
         try {
-          const { content: rawAiResponse } = await callOpenRouterStreaming(
+          const jsonText = await callGemini(
             PROMPT + JSON.stringify(chapter)
           );
 
-          let cleaned = rawAiResponse.trim();
-          cleaned = cleaned.replace(/<think>[\s\S]*?<\/think>/g, "").trim();
-          const firstBrace = cleaned.indexOf("{");
-          const lastBrace = cleaned.lastIndexOf("}");
-          if (firstBrace !== -1 && lastBrace !== -1) {
-            cleaned = cleaned.slice(firstBrace, lastBrace + 1);
-          }
+          const jsonResp = JSON.parse(jsonText);
 
-          const jsonResp = JSON.parse(cleaned);
-
-          if (Array.isArray(jsonResp.topics)) {
-            for (const topic of jsonResp.topics) {
-              if (includeVideo) {
-                const videos = await GetYoutubeVideo(topic.topic || "");
-                topic.youtubeVideos = videos;
-              } else {
-                topic.youtubeVideos = [];
-              }
-            }
+          for (const topic of jsonResp.topics || []) {
+            topic.youtubeVideos = includeVideo
+              ? await GetYoutubeVideo(topic.topic)
+              : [];
           }
 
           CourseContent.push(jsonResp);
           await sleep(2000);
         } catch (err) {
-          console.error("Chapter error:", err.message);
           CourseContent.push({
             error: true,
-            chapter: chapter.chapterName || "unknown",
-            message: "Failed to generate content",
+            chapter: chapter.chapterName,
+            message: err.message,
           });
         }
       }
@@ -362,7 +319,6 @@ router.get("/", async (req, res) => {
       CourseContent: courseData[0].courseContent,
     });
   } catch (err) {
-    console.error("GET error:", err);
     res.status(500).json({
       error: "Failed to fetch course content",
       details: err.message,
