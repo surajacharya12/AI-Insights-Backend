@@ -74,6 +74,9 @@ router.post("/grammar-check", async (req, res) => {
 
     const prompt = `Correct the grammar of the following text and return only the corrected version:\n\n"${trimmedText}"`;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -84,7 +87,9 @@ router.post("/grammar-check", async (req, res) => {
         model: "xiaomi/mimo-v2-flash:free",
         messages: [{ role: "user", content: prompt }],
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
     const data = await response.json();
     const corrected = data.choices?.[0]?.message?.content || trimmedText;
@@ -97,9 +102,11 @@ router.post("/grammar-check", async (req, res) => {
     });
   } catch (error) {
     console.error("Grammar Check Error:", error);
-    return res.status(500).json({
+    const statusCode = error.name === 'AbortError' ? 504 : 500;
+    const message = error.name === 'AbortError' ? "Request timeout. Please try again." : "Server error";
+    return res.status(statusCode).json({
       success: false,
-      message: "Server error",
+      message: message,
       error: error.message,
     });
   }
@@ -122,6 +129,9 @@ router.post("/image-to-text", async (req, res) => {
       });
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -131,7 +141,7 @@ router.post("/image-to-text", async (req, res) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "nvidia/nemotron-nano-12b-v2-vl:free",
+          model: "allenai/molmo-2-8b:free",
           messages: [
             {
               role: "user",
@@ -147,8 +157,10 @@ router.post("/image-to-text", async (req, res) => {
             },
           ],
         }),
+        signal: controller.signal,
       }
     );
+    clearTimeout(timeoutId);
 
     const data = await response.json();
     const extractedText = data.choices?.[0]?.message?.content || "";
@@ -160,9 +172,11 @@ router.post("/image-to-text", async (req, res) => {
     });
   } catch (error) {
     console.error("Image to Text Error:", error);
-    res.status(500).json({
+    const statusCode = error.name === 'AbortError' ? 504 : 500;
+    const message = error.name === 'AbortError' ? "Request timeout. Please try again." : error.message;
+    res.status(statusCode).json({
       success: false,
-      message: error.message,
+      message: message,
     });
   }
 });

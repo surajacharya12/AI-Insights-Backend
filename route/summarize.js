@@ -2,8 +2,13 @@ import express from "express";
 import fetch from "node-fetch";
 import { Innertube } from "youtubei.js";
 import { YoutubeTranscript } from "youtube-transcript";
+import { OpenRouter } from "@openrouter/sdk";
 
 const router = express.Router();
+
+const openrouter = new OpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY_SUMMARIZE,
+});
 
 router.post("/summarize", async (req, res) => {
   const { videoUrl } = req.body;
@@ -108,93 +113,106 @@ TRANSCRIPT: ${transcriptText || "No transcript available"}
     }
 
     console.log("[Summarize] Sending request to OpenRouter AI...");
-    const aiRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENROUTER_API_KEY_SUMMARIZE}`,
-        "HTTP-Referer": "https://ai-insights-web.vercel.app", // <-- Update to your actual site
-        "X-Title": "AI Insights", // <-- Update to your site name
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct:free",
+    
+    const summaryPrompt = `You are an expert YouTube video analyst and technical content writer.
+
+Your task is to generate a **detailed, in-depth, professional summary** of the provided YouTube content.
+
+RULES (VERY IMPORTANT):
+- Be **extensive and detailed**
+- Do NOT give a short summary
+- Prefer **more information over brevity**
+- Use **clear section headings**
+- Use **bullet points, numbered lists, and tables where helpful**
+- If the content is technical, include:
+  - Code snippets (in proper Markdown code blocks)
+  - Examples
+  - Concepts explained step-by-step
+- If multiple topics are discussed, separate them clearly
+- Do NOT say "this video discusses" — write as a knowledge report
+
+OUTPUT FORMAT (STRICT):
+Use Markdown and follow this structure exactly:
+
+### 📌 Video Overview
+(2–4 detailed paragraphs explaining the overall topic and intent)
+
+### 🧠 Key Concepts Explained
+- Explain each major concept in depth
+- Use sub-bullets where necessary
+
+### 🧩 Detailed Breakdown
+- Step-by-step explanation of important sections
+- Expand ideas instead of summarizing briefly
+
+### 📊 Tables / Structured Data (if applicable)
+- Use tables when comparisons, lists, or structured facts exist
+
+### 💻 Code Examples (if applicable)
+- Include code blocks with proper language formatting
+- Explain what the code does
+
+### 🎯 Practical Takeaways
+- Actionable insights
+- Real-world applications
+- Best practices or warnings
+
+If NO transcript is available:
+- Infer intelligently from title, description, and keywords
+- Still produce a **long, educational report**
+
+Never refuse. Never shorten. Never summarize aggressively.
+
+Now analyze this content:
+
+${fullText}`;
+
+    let summary = "";
+    try {
+      const stream = await openrouter.chat.send({
+        model: "allenai/molmo-2-8b:free",
         messages: [
           {
-            role: "system",
-            content: `
-You are an expert YouTube video analyst and technical content writer.
-
-                        Your task is to generate a **detailed, in-depth, professional summary** of the provided YouTube content.
-
-                        RULES (VERY IMPORTANT):
-                        - Be **extensive and detailed**
-                        - Do NOT give a short summary
-                        - Prefer **more information over brevity**
-                        - Use **clear section headings**
-                        - Use **bullet points, numbered lists, and tables where helpful**
-                        - If the content is technical, include:
-                        - Code snippets (in proper Markdown code blocks)
-                        - Examples
-                        - Concepts explained step-by-step
-                        - If multiple topics are discussed, separate them clearly
-                        - Do NOT say "this video discusses" — write as a knowledge report
-
-                        OUTPUT FORMAT (STRICT):
-                        Use Markdown and follow this structure exactly:
-
-                        ### 📌 Video Overview
-                        (2–4 detailed paragraphs explaining the overall topic and intent)
-
-                        ### 🧠 Key Concepts Explained
-                        - Explain each major concept in depth
-                        - Use sub-bullets where necessary
-
-                        ### 🧩 Detailed Breakdown
-                        - Step-by-step explanation of important sections
-                        - Expand ideas instead of summarizing briefly
-
-                        ### 📊 Tables / Structured Data (if applicable)
-                        - Use tables when comparisons, lists, or structured facts exist
-
-                        ### 💻 Code Examples (if applicable)
-                        - Include code blocks with proper language formatting
-                        - Explain what the code does
-
-                        ### 🎯 Practical Takeaways
-                        - Actionable insights
-                        - Real-world applications
-                        - Best practices or warnings
-
-                        If NO transcript is available:
-                        - Infer intelligently from title, description, and keywords
-                        - Still produce a **long, educational report**
-
-                        Never refuse. Never shorten. Never summarize aggressively.
-            `,
+            role: "user",
+            content: summaryPrompt,
           },
-          { role: "user", content: fullText },
         ],
-      }),
-    });
+        stream: true,
+      });
 
-    // Safe JSON parse
-    let result;
-    try {
-      result = await aiRes.json();
-    } catch (e) {
-      throw new Error(`AI Service returned invalid response: ${e.message}`);
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content;
+        if (content) {
+          summary += content;
+        }
+      }
+
+      if (!summary) {
+        throw new Error("AI returned an empty summary.");
+      }
+
+      res.json({ summary });
+    } catch (error) {
+      console.error("[Summarize Error] OpenRouter Error:", error.message);
+      
+      let userMessage = error.message;
+      if (error.status === 402) {
+        userMessage = "API spending limit exceeded. Please check your OpenRouter account.";
+      } else if (error.status === 429) {
+        userMessage = "Rate limit exceeded. Please try again later.";
+      } else if (error.status === 401) {
+        userMessage = "API authentication failed. Check your API key.";
+      }
+      
+      const statusCode = error.status || 500;
+      res.status(statusCode).json({ 
+        error: userMessage,
+        hint: statusCode === 504 ? "Request timed out. Try again later." : "Failed to summarize video"
+      });
     }
-
-    if (result.error)
-      throw new Error(result.error.message || "Unknown AI error");
-
-    const summary = result.choices?.[0]?.message?.content;
-    if (!summary) throw new Error("AI returned an empty summary.");
-
-    res.json({ summary });
-  } catch (e) {
-    console.error("[Summarize Error]", e.message);
-    res.status(500).json({ error: e.message });
+  } catch (error) {
+    console.error("[Summarize] Unexpected error:", error.message);
+    res.status(500).json({ error: "An unexpected error occurred while processing the video." });
   }
 });
 
