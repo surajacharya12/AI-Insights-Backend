@@ -23,12 +23,20 @@ router.post("/generate-image", async (req, res) => {
     try {
       console.log("Generating image via Pollinations API...");
 
-      const pollinationsUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(
+      // Using the new unified Pollinations API endpoint
+      const pollinationsUrl = `https://gen.pollinations.ai/prompt/${encodeURIComponent(
         prompt
       )}?nologo=true`;
 
+      console.log("Request URL:", pollinationsUrl);
       const response = await fetch(pollinationsUrl);
-      if (!response.ok) throw new Error("Pollinations API request failed");
+      console.log("Response status:", response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("API Error Response:", errorText);
+        throw new Error(`Pollinations API request failed: ${response.status} ${response.statusText}`);
+      }
 
       const imageBuffer = await response.arrayBuffer();
       const imageBase64 = Buffer.from(imageBuffer).toString("base64");

@@ -4,7 +4,7 @@ import { quizHistoryTable } from '../config/schema.js';
 import { eq } from 'drizzle-orm';
 
 const router = express.Router();
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_QUIZ;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_GRAMMAR;
 const OPENROUTER_MODEL = 'google/gemma-3n-e2b-it:free';
 
 // Helper function to call OpenRouter API

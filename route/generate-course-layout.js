@@ -103,7 +103,9 @@ router.post("/generate", async (req, res) => {
         const rawText =
             textResponse.candidates?.[0]?.content?.parts?.[0]?.text || "";
 
-        const courseJSON = extractJSON(rawText);
+        let courseJSON = extractJSON(rawText);
+        // Fix bad escapes to prevent JSON.parse errors
+        courseJSON = courseJSON.replace(/\\(?!["\\/bfnrtu]|u[0-9a-fA-F]{4})/g, "\\\\");
         const parsed = JSON.parse(courseJSON);
         const course = parsed.course;
 

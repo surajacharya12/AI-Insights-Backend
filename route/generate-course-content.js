@@ -76,7 +76,9 @@ const callGemini = async (prompt) => {
     throw new Error("Empty response from Gemini");
   }
 
-  return extractJSON(text);
+  const extracted = extractJSON(text);
+  // Fix bad escapes (e.g. \s -> \\s) to prevent JSON.parse errors
+  return extracted.replace(/\\(?!["\\/bfnrtu]|u[0-9a-fA-F]{4})/g, "\\\\");
 };
 
 /* =====================================================
