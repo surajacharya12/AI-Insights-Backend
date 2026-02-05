@@ -2,19 +2,7 @@ import "dotenv/config";
 import express from "express";
 import cors from "cors";
 
-import userRouter from "./route/user.js";
-import bot from "./route/thinkbot.js";
-import aiToolsRoutes from "./route/aiTools.route.js";
-import enrollRouter from "./route/enroll-course.js";
-import courseRouter from "./route/generate-course-layout.js";
-import generateCourseContentRouter from "./route/generate-course-content.js";
-import getCoursesRouter from "./route/courses.js";
-import generateQuizRouter from "./route/generate-quiz.js";
-import chatpdfRouter from "./route/chatpdf.js";
-import resourcesRouter from "./route/resources.js";
-import courseProgressRouter from "./route/course-progress.js";
-import summarizeRoute from "./route/summarize.js";
-import thumbnailsRouter from "./route/thumnaills.js";
+// Route imports moved to dynamic loading below
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -73,19 +61,19 @@ app.get("/status", async (req, res) => {
   }
 });
 
-app.use("/user", userRouter);
-app.use("/bot", bot);
-app.use("/api/ai-tools", aiToolsRoutes);
-app.use("/api/courses", courseRouter);
-app.use("/api/generate-course-content", generateCourseContentRouter);
-app.use("/api/enroll", enrollRouter);
-app.use("/api/get-courses", getCoursesRouter);
-app.use("/api/generate-quiz", generateQuizRouter);
-app.use("/api/chatpdf", chatpdfRouter);
-app.use("/api/resources", resourcesRouter);
-app.use("/api/course-progress", courseProgressRouter);
-app.use("/api", summarizeRoute);
-app.use("/api/thumbnails", thumbnailsRouter);
+app.use("/user", (req, res, next) => import("./route/user.js").then(m => m.default(req, res, next)));
+app.use("/bot", (req, res, next) => import("./route/thinkbot.js").then(m => m.default(req, res, next)));
+app.use("/api/ai-tools", (req, res, next) => import("./route/aiTools.route.js").then(m => m.default(req, res, next)));
+app.use("/api/courses", (req, res, next) => import("./route/generate-course-layout.js").then(m => m.default(req, res, next)));
+app.use("/api/generate-course-content", (req, res, next) => import("./route/generate-course-content.js").then(m => m.default(req, res, next)));
+app.use("/api/enroll", (req, res, next) => import("./route/enroll-course.js").then(m => m.default(req, res, next)));
+app.use("/api/get-courses", (req, res, next) => import("./route/courses.js").then(m => m.default(req, res, next)));
+app.use("/api/generate-quiz", (req, res, next) => import("./route/generate-quiz.js").then(m => m.default(req, res, next)));
+app.use("/api/chatpdf", (req, res, next) => import("./route/chatpdf.js").then(m => m.default(req, res, next)));
+app.use("/api/resources", (req, res, next) => import("./route/resources.js").then(m => m.default(req, res, next)));
+app.use("/api/course-progress", (req, res, next) => import("./route/course-progress.js").then(m => m.default(req, res, next)));
+app.use("/api", (req, res, next) => import("./route/summarize.js").then(m => m.default(req, res, next)));
+app.use("/api/thumbnails", (req, res, next) => import("./route/thumnaills.js").then(m => m.default(req, res, next)));
 
 
 /* =====================================================
