@@ -19,6 +19,15 @@ import thumbnailsRouter from "./route/thumnaills.js";
 const app = express();
 const port = process.env.PORT || 3001;
 
+// 🟢 DIAGNOSTIC ROUTE - ABSOLUTE TOP
+app.get("/fast-ping", (req, res) => {
+  res.json({
+    success: true,
+    message: "Server reached! No imports blocked this.",
+    time: new Date().toISOString()
+  });
+});
+
 /* =====================================================
    GLOBAL MIDDLEWARE
 ===================================================== */
