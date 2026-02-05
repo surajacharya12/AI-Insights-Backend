@@ -40,13 +40,23 @@ app.get("/", (req, res) => {
 
 app.get("/status", async (req, res) => {
   try {
+    // Test DB connection
+    const { pool } = await import("./config/db.js");
+    const dbTest = await pool.query("SELECT NOW()");
+
     return res.json({
       success: true,
-      message: "Backend is running",
+      message: "Backend and Database are running",
+      dbTime: dbTest.rows[0].now,
       env: process.env.NODE_ENV
     });
   } catch (err) {
-    return res.status(500).json({ success: false, error: err.message });
+    console.error("Status check failed:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Backend is running but Database is failing",
+      error: err.message
+    });
   }
 });
 
