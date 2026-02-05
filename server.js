@@ -91,7 +91,7 @@ app.use((err, req, res, next) => {
 /* =====================================================
    SERVER
 ===================================================== */
-if (process.env.NODE_ENV !== "production") {
+if (!process.env.VERCEL) {
   const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });

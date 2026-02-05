@@ -2,7 +2,7 @@ import express from "express";
 import { usersTable, coursesTable, enrollmentsTable, quizHistoryTable, userPdfsTable } from "../config/schema.js";
 import db from "../config/db.js";
 import { eq, inArray } from "drizzle-orm";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import { upload } from "../config/cloudinary.js";
 import sendEmail from "../utils/sendEmail.js";
 

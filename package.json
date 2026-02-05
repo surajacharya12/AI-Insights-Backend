@@ -14,7 +14,7 @@
     "@openrouter/sdk": "^0.3.1",
     "@pixelbin/admin": "^4.2.0",
     "axios": "^1.13.2",
-    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.3",
     "bytez.js": "^3.0.0",
     "canvas": "^3.2.1",
     "cloudinary": "^1.41.3",
