@@ -35,7 +35,11 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
    ROUTES
 ===================================================== */
 app.get("/", (req, res) => {
-  res.json({ message: "Hello from AI Insight backend!", status: "active" });
+  res.json({
+    message: "AI Insight API is online",
+    vercel: !!process.env.VERCEL,
+    timestamp: new Date().toISOString()
+  });
 });
 
 app.get("/status", async (req, res) => {
