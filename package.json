@@ -38,6 +38,9 @@
     "nodemon": "^3.1.11",
     "tsx": "^4.21.0"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "canvas",

@@ -35,7 +35,19 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
    ROUTES
 ===================================================== */
 app.get("/", (req, res) => {
-  res.send("Hello from AI Insight backend!");
+  res.json({ message: "Hello from AI Insight backend!", status: "active" });
+});
+
+app.get("/status", async (req, res) => {
+  try {
+    return res.json({
+      success: true,
+      message: "Backend is running",
+      env: process.env.NODE_ENV
+    });
+  } catch (err) {
+    return res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 app.use("/user", userRouter);
@@ -69,14 +81,12 @@ app.use((err, req, res, next) => {
 /* =====================================================
    SERVER
 ===================================================== */
-/* =====================================================
-   SERVER
-===================================================== */
-const server = app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
-
-// Long AI requests safety
-server.setTimeout(10 * 60 * 1000);
+if (process.env.NODE_ENV !== "production") {
+  const server = app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
+  });
+  // Long AI requests safety
+  server.setTimeout(10 * 60 * 1000);
+}
 
 export default app;
