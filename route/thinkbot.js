@@ -1,23 +1,18 @@
 import express from "express";
-import { OpenRouter } from "@openrouter/sdk";
+import OpenAI from "openai";
 
 const router = express.Router();
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_THINK_BOT;
-const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
-const SITE_NAME = process.env.SITE_NAME || "ThinkBot";
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY_THINKBOT;
 
 // Validate API key exists
-if (!OPENROUTER_API_KEY) {
-  console.error("❌ OPENROUTER_API_KEY_THINK_BOT is not set in environment variables");
+if (!NVIDIA_API_KEY) {
+  console.error("❌ NVIDIA_API_KEY_THINKBOT is not set in environment variables");
 }
 
-const openrouter = new OpenRouter({
-  apiKey: OPENROUTER_API_KEY,
-  defaultHeaders: {
-    "HTTP-Referer": SITE_URL,
-    "X-Title": SITE_NAME,
-  },
+const client = new OpenAI({
+  baseURL: "https://integrate.api.nvidia.com/v1",
+  apiKey: NVIDIA_API_KEY,
 });
 
 // POST /api/chat
@@ -33,11 +28,11 @@ router.post("/chat", async (req, res) => {
     }
 
     // Check if API key is configured
-    if (!OPENROUTER_API_KEY) {
+    if (!NVIDIA_API_KEY) {
       return res.status(500).json({
         success: false,
         error: "ThinkBot is not configured. Please contact the administrator.",
-        details: "Missing API key configuration",
+        details: "Missing NVIDIA API key configuration",
       });
     }
 
@@ -58,30 +53,45 @@ Use Markdown formatting to structure your response:
 - Use tables for comparisons or structured data.
 - Use code blocks for code snippets.`;
 
-    // 🔹 Stream internally
-    const stream = await openrouter.chat.send({
-      model: "openai/gpt-4o-mini",
+    // 🔹 Generate completion with reasoning enabled
+    const completion = await client.chat.completions.create({
+      model: "deepseek-ai/deepseek-v3.2", // Updated to fix 404
       messages: [
         { role: "system", content: systemMessage },
         { role: "user", content: message },
       ],
+      temperature: 1,
+      top_p: 0.95,
+      max_tokens: 4096,
       stream: true,
-      streamOptions: {
-        includeUsage: true,
-      },
+      extra_body: {
+        chat_template_kwargs: {
+          thinking: true
+        }
+      }
     });
 
     let answer = "";
+    let reasoningText = "";
 
-    for await (const chunk of stream) {
-      const content = chunk.choices?.[0]?.delta?.content;
-      if (content) {
-        answer += content;
+    for await (const chunk of completion) {
+      if (!chunk.choices || chunk.choices.length === 0) continue;
+
+      const delta = chunk.choices[0].delta;
+
+      // Handle Reasoning/Thinking content
+      if (delta.reasoning_content) {
+        reasoningText += delta.reasoning_content;
+      }
+
+      // Handle Main Content
+      if (delta.content) {
+        answer += delta.content;
       }
     }
 
     // 🔹 Post-process identity safety
-    answer = answer
+    let processedAnswer = answer
       .replace(/\bNex\b/gi, "ThinkBot")
       .replace(/\bDeepSeek\b/gi, "ThinkBot")
       .replace(/Shanghai Innovation Institution/gi, "Suraj Acharya")
@@ -90,23 +100,17 @@ Use Markdown formatting to structure your response:
 
     return res.json({
       success: true,
-      data: { answer },
+      data: {
+        answer: processedAnswer,
+        reasoning: reasoningText // Return this in case the frontend wants to show "thinking"
+      },
     });
 
   } catch (error) {
     console.error("ThinkBot Error:", error);
 
-    // Handle insufficient credits
-    if (error.statusCode === 402) {
-      return res.status(402).json({
-        success: false,
-        error: "ThinkBot credits exhausted. Please purchase more credits at https://openrouter.ai/settings/credits or contact the administrator.",
-        details: "Insufficient credits for the selected model",
-      });
-    }
-
     // Handle rate limiting
-    if (error.message?.includes("429") || error.status === 429) {
+    if (error.status === 429) {
       return res.status(429).json({
         success: false,
         error: "Rate limit exceeded. Please try again later.",
@@ -114,20 +118,11 @@ Use Markdown formatting to structure your response:
     }
 
     // Handle authentication errors
-    if (error.message?.includes("401") || error.status === 401) {
+    if (error.status === 401) {
       return res.status(500).json({
         success: false,
         error: "ThinkBot authentication failed. Please contact the administrator.",
-        details: "Invalid API key",
-      });
-    }
-
-    // Handle network errors
-    if (error.code === "ECONNREFUSED" || error.code === "ENOTFOUND") {
-      return res.status(503).json({
-        success: false,
-        error: "ThinkBot service is temporarily unavailable. Please try again later.",
-        details: "Network connection error",
+        details: "Invalid NVIDIA API key",
       });
     }
 

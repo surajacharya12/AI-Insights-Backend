@@ -6,9 +6,9 @@ import { OpenRouter } from "@openrouter/sdk";
 
 const router = express.Router();
 
-const openrouter = new OpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY_SUMMARIZE,
-});
+// NVIDIA API Configuration
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY_LLAMA;
+const NVIDIA_INVOKE_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 
 router.post("/summarize", async (req, res) => {
   const { videoUrl } = req.body;
@@ -86,7 +86,7 @@ router.post("/summarize", async (req, res) => {
               .join(" ");
           console.log("[Summarize] TimedText transcript fetched");
         }
-      } catch {}
+      } catch { }
     }
 
     if (!transcriptText) {
@@ -95,7 +95,7 @@ router.post("/summarize", async (req, res) => {
           await YoutubeTranscript.fetchTranscript(videoId);
         transcriptText = manualTranscript.map((t) => t.text).join(" ");
         console.log("[Summarize] youtube-transcript package fetched");
-      } catch {}
+      } catch { }
     }
 
     // --- Phase 3: Prepare AI Input ---
@@ -112,8 +112,8 @@ TRANSCRIPT: ${transcriptText || "No transcript available"}
       throw new Error("YouTube metadata unavailable for this video.");
     }
 
-    console.log("[Summarize] Sending request to OpenRouter AI...");
-    
+    console.log("[Summarize] Sending request to NVIDIA AI...");
+
     const summaryPrompt = `You are an expert YouTube video analyst and technical content writer.
 
 Your task is to generate a **detailed, in-depth, professional summary** of the provided YouTube content.
@@ -167,25 +167,33 @@ Now analyze this content:
 
 ${fullText}`;
 
+
     let summary = "";
     try {
-      const stream = await openrouter.chat.send({
-        model: "allenai/molmo-2-8b:free",
-        messages: [
-          {
-            role: "user",
-            content: summaryPrompt,
-          },
-        ],
-        stream: true,
+      const response = await fetch(NVIDIA_INVOKE_URL, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${NVIDIA_API_KEY}`,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({
+          model: "meta/llama-4-maverick-17b-128e-instruct",
+          messages: [{ role: "user", content: summaryPrompt }],
+          max_tokens: 4096, // Increased for detailed summary
+          temperature: 0.7,
+          top_p: 1.0,
+          stream: false
+        }),
       });
 
-      for await (const chunk of stream) {
-        const content = chunk.choices[0]?.delta?.content;
-        if (content) {
-          summary += content;
-        }
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`NVIDIA API error: ${response.status} ${errText}`);
       }
+
+      const data = await response.json();
+      summary = data.choices[0]?.message?.content || "";
 
       if (!summary) {
         throw new Error("AI returned an empty summary.");
@@ -193,21 +201,10 @@ ${fullText}`;
 
       res.json({ summary });
     } catch (error) {
-      console.error("[Summarize Error] OpenRouter Error:", error.message);
-      
-      let userMessage = error.message;
-      if (error.status === 402) {
-        userMessage = "API spending limit exceeded. Please check your OpenRouter account.";
-      } else if (error.status === 429) {
-        userMessage = "Rate limit exceeded. Please try again later.";
-      } else if (error.status === 401) {
-        userMessage = "API authentication failed. Check your API key.";
-      }
-      
-      const statusCode = error.status || 500;
-      res.status(statusCode).json({ 
-        error: userMessage,
-        hint: statusCode === 504 ? "Request timed out. Try again later." : "Failed to summarize video"
+      console.error("[Summarize Error] NVIDIA Error:", error.message);
+      res.status(500).json({
+        error: error.message,
+        hint: "Failed to summarize video using NVIDIA AI"
       });
     }
   } catch (error) {

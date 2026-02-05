@@ -8,50 +8,60 @@ import db from "../config/db.js";
 import { userPdfsTable } from "../config/schema.js";
 import { eq } from "drizzle-orm";
 
+import OpenAI from "openai";
+
 const router = express.Router();
 
 // ================= CONFIG =================
 const upload = multer({ dest: os.tmpdir() });
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY_CHATPDF;
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY_CHATPDF;
 
-if (!OPENROUTER_API_KEY) {
-    console.error("❌ OPENROUTER_API_KEY_CHATPDF is not set");
+if (!NVIDIA_API_KEY) {
+    console.error("❌ NVIDIA_API_KEY_CHATPDF is not set");
 }
 
-const OPENROUTER_MODEL = "tngtech/deepseek-r1t2-chimera:free";
+const client = new OpenAI({
+    baseURL: "https://integrate.api.nvidia.com/v1",
+    apiKey: NVIDIA_API_KEY,
+});
 
 // ================= HELPERS =================
-async function askOpenRouter(context, question) {
-    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            model: OPENROUTER_MODEL,
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        "You are an AI assistant. Answer strictly based on the provided PDF content. Use markdown formatting.",
-                },
-                {
-                    role: "user",
-                    content: `PDF Content:\n${context}\n\nQuestion:\n${question}`,
-                },
-            ],
-        }),
+async function askNvidiaThink(context, question) {
+    const completion = await client.chat.completions.create({
+        model: "qwen/qwen3-next-80b-a3b-thinking",
+        messages: [
+            {
+                role: "system",
+                content: "You are an AI assistant. Answer strictly based on the provided PDF content. Use markdown formatting.",
+            },
+            {
+                role: "user",
+                content: `PDF Content:\n${context}\n\nQuestion:\n${question}`,
+            },
+        ],
+        temperature: 0.6,
+        top_p: 0.7,
+        max_tokens: 4096,
+        stream: true,
     });
 
-    const data = await response.json();
+    let answer = "";
+    let reasoningText = "";
 
-    if (!data.choices || !data.choices.length) {
-        throw new Error("No response from OpenRouter");
+    for await (const chunk of completion) {
+        if (!chunk.choices || chunk.choices.length === 0) continue;
+        const delta = chunk.choices[0].delta;
+
+        if (delta.reasoning_content) {
+            reasoningText += delta.reasoning_content;
+        }
+        if (delta.content) {
+            answer += delta.content;
+        }
     }
 
-    return data.choices[0].message.content;
+    return { answer, reasoning: reasoningText };
 }
 
 // ================= ROUTES =================
@@ -146,9 +156,9 @@ router.post("/chat", async (req, res) => {
             return res.status(403).json({ message: "Unauthorized access" });
         }
 
-        const answer = await askOpenRouter(pdfRow.pdfText, question);
+        const { answer, reasoning } = await askNvidiaThink(pdfRow.pdfText, question);
 
-        res.json({ answer });
+        res.json({ answer, reasoning });
     } catch (err) {
         console.error(err);
         res.status(500).json({

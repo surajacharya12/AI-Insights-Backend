@@ -1,6 +1,6 @@
 import express from "express";
 import axios from "axios";
-import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
 import db from "../config/db.js";
 import { coursesTable } from "../config/schema.js";
 import { eq } from "drizzle-orm";
@@ -8,10 +8,11 @@ import { eq } from "drizzle-orm";
 const router = express.Router();
 
 /* =====================================================
-   GEMINI INIT
+   OPENAI (NVIDIA) INIT
 ===================================================== */
-const ai = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_COURSE,
+const client = new OpenAI({
+  baseURL: "https://integrate.api.nvidia.com/v1",
+  apiKey: process.env.NVIDIA_API_KEY_CONTENT,
 });
 
 /* =====================================================
@@ -25,12 +26,20 @@ const YOUTUBE_BASE_URL = "https://www.googleapis.com/youtube/v3/search";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 const extractJSON = (text) => {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
+  let cleaned = text.trim();
+  // Remove markdown code block markers if they wrap the JSON
+  if (cleaned.startsWith('```json')) cleaned = cleaned.replace(/^```json/, '');
+  if (cleaned.startsWith('```')) cleaned = cleaned.replace(/^```/, '');
+  if (cleaned.endsWith('```')) cleaned = cleaned.replace(/```$/, '');
+
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+
   if (start === -1 || end === -1) {
-    throw new Error("Invalid JSON from Gemini");
+    throw new Error("Invalid JSON: braces not found");
   }
-  return text.slice(start, end + 1);
+
+  return cleaned.slice(start, end + 1);
 };
 
 /* =====================================================
@@ -61,24 +70,55 @@ const GetYoutubeVideo = async (query) => {
 };
 
 /* =====================================================
-   GEMINI CALL
+   OPENAI CALL
 ===================================================== */
-const callGemini = async (prompt) => {
-  const response = await ai.models.generateContent({
-    model: "gemini-flash-latest",
-    contents: prompt,
-  });
+const callOpenAI = async (prompt) => {
+  try {
+    const completion = await client.chat.completions.create({
+      model: "meta/llama-3.1-405b-instruct",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.2,
+      top_p: 1,
+      max_tokens: 8192,
+    });
 
-  const text =
-    response.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    if (!completion || !completion.choices || completion.choices.length === 0) {
+      console.error("OpenAI Response Structure:", JSON.stringify(completion, null, 2));
+      throw new Error("Empty choices array from OpenAI");
+    }
 
-  if (!text) {
-    throw new Error("Empty response from Gemini");
+    const text = completion.choices?.[0]?.message?.content || "";
+
+    if (!text) {
+      console.error("OpenAI Response Structure (No Content):", JSON.stringify(completion, null, 2));
+      throw new Error("Empty content in OpenAI response");
+    }
+
+    const extracted = extractJSON(text);
+
+    // Robustly fix bad escapes
+    return extracted.replace(/\\/g, (match, offset, str) => {
+      const nextChar = str[offset + 1];
+      if (!nextChar) return "\\\\";
+      if (['"', '\\', '/', 'b', 'f', 'n', 'r', 't'].includes(nextChar)) return "\\";
+      if (nextChar === 'u') {
+        const hex = str.slice(offset + 2, offset + 6);
+        if (/^[0-9a-fA-F]{4}$/.test(hex)) return "\\";
+      }
+      return "\\\\";
+    });
+  } catch (err) {
+    console.error("Error in callOpenAI:", err.message);
+    if (err.response) {
+      console.error("API Error Response:", err.response.data);
+    }
+    throw err;
   }
-
-  const extracted = extractJSON(text);
-  // Fix bad escapes (e.g. \s -> \\s) to prevent JSON.parse errors
-  return extracted.replace(/\\(?!["\\/bfnrtu]|u[0-9a-fA-F]{4})/g, "\\\\");
 };
 
 /* =====================================================
@@ -90,7 +130,7 @@ router.post("/", async (req, res) => {
 RULES:
 - Output ONLY valid JSON.
 - The "content" field MUST be formatted using Markdown (headings, lists, code, etc.).
-- Use actual newline characters inside the "content" string for Markdown formatting.
+- Use "\\n" for newline characters inside the "content" string. (CRITICAL: Do not use actual literal newlines).
 - No explanations or extra text outside the JSON.
 - Generate content for EVERY topic listed in the provided chapter data. Do not skip any topics.
 
@@ -107,11 +147,11 @@ Your task is to explain topics in a clear, deep, and practical way, exactly like
 Response Rules (MANDATORY)
 
 1. Use Markdown formatting strictly
-   - Headingshere
-   - Bullet points
-   - Tables where helpful
+   - Headings (###, ####) for every sub-concept
+   - Bullet points for lists
+   - Tables for comparisons and structured data
    - Math equations (LaTeX when needed)
-   - Code blocks with language labels
+   - Code blocks with language labels immediately following each sub-topic explanation
 
 2. Always begin with a clear definition
    - Explain the concept in simple language
@@ -127,11 +167,12 @@ Response Rules (MANDATORY)
    - Industry-level scenarios
    - Avoid shallow or generic explanations
 
-5. Code-related topics
-   - Show clean, production-style code
-   - Use proper code blocks (language)
-   - Explain every important line
-   - Include common mistakes and best practices
+5. Code-related topics (MANDATORY INTERWEAVING)
+   - For technical topics, you MUST NOT just put one big code block at the end.
+   - For EVERY individual technique or sub-step mentioned (e.g., Handling Missing Values, Removing Duplicates, Handling Outliers), provide a detailed explanation followed immediately by a functional code block for that specific step.
+   - Show clean, production-style, well-commented code.
+   - Explain every important line.
+   - Include common mistakes and best practices for each code block.
 
 6. Math-related topics
    - Show formulas clearly
@@ -171,10 +212,10 @@ Tone & Style
 - Clear, logical, and meaningful explanations
 
 Output Goal
-The answer should feel like:
-- A high-quality textbook explanation
-- Combined with real classroom teaching
-- Plus industry-ready knowledge"
+The answer should be an exhaustive, long-form masterclass (1500+ words per topic if technical). It should feel like:
+- A premium, high-quality textbook chapter
+- Combined with real-world professional coding and hands-on teaching
+- Proactively covering all sub-steps with individual code implementations for each"
     }
   ]
 }
@@ -197,10 +238,10 @@ Chapter data:
       });
     }
 
-    // Parse & unwrap course JSON
     if (typeof courseJson === "string") {
       courseJson = JSON.parse(courseJson);
     }
+
     if (courseJson.course) {
       courseJson = courseJson.course;
     }
@@ -209,8 +250,8 @@ Chapter data:
       return res.status(400).json({ error: "Invalid chapters array" });
     }
 
-    // Resolve includeVideo
     let includeVideo = includeVideoFromReq;
+
     if (includeVideo === undefined) {
       const dbCourse = await db
         .select()
@@ -232,13 +273,21 @@ Chapter data:
         .limit(1);
 
       CourseContent = existing[0]?.courseContent || [];
+
       const chapter = courseJson.chapters[chapterIndex];
 
-      const jsonText = await callGemini(
+      const jsonText = await callOpenAI(
         PROMPT + JSON.stringify(chapter)
       );
 
-      const jsonResp = JSON.parse(jsonText);
+      let jsonResp;
+      try {
+        jsonResp = JSON.parse(jsonText);
+      } catch (parseErr) {
+        console.error("JSON Parse Error:", parseErr.message);
+        console.log("Raw JSON Text was:", jsonText);
+        throw new Error("Failed to parse AI response into JSON");
+      }
 
       for (const topic of jsonResp.topics || []) {
         topic.youtubeVideos = includeVideo
@@ -253,11 +302,18 @@ Chapter data:
     else {
       for (const chapter of courseJson.chapters) {
         try {
-          const jsonText = await callGemini(
+          const jsonText = await callOpenAI(
             PROMPT + JSON.stringify(chapter)
           );
 
-          const jsonResp = JSON.parse(jsonText);
+          let jsonResp;
+          try {
+            jsonResp = JSON.parse(jsonText);
+          } catch (parseErr) {
+            console.error("JSON Parse Error (loop):", parseErr.message);
+            console.log("Raw JSON Text was:", jsonText);
+            throw new Error("Failed to parse AI response into JSON");
+          }
 
           for (const topic of jsonResp.topics || []) {
             topic.youtubeVideos = includeVideo
@@ -266,6 +322,8 @@ Chapter data:
           }
 
           CourseContent.push(jsonResp);
+
+          // rate-limit safety
           await sleep(2000);
         } catch (err) {
           CourseContent.push({
