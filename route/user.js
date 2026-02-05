@@ -300,27 +300,15 @@ router.delete("/:id", async (req, res) => {
         }
         const userEmail = userResult[0].email;
 
-        // 2. Find all courses created by this user to delete their enrollments
-        const userCourses = await db.select({ cid: coursesTable.cid }).from(coursesTable).where(eq(coursesTable.userEmail, userEmail));
-        const courseCids = userCourses.map(c => c.cid);
-
-        // 3. Delete all enrollments in those courses (even if by other users)
-        if (courseCids.length > 0) {
-            await db.delete(enrollmentsTable).where(inArray(enrollmentsTable.courseId, courseCids));
-        }
-
-        // 4. Delete user's own related records
+        // 2. Delete user's own related records (but keep courses they created)
         await db.delete(enrollmentsTable).where(eq(enrollmentsTable.userEmail, userEmail));
         await db.delete(quizHistoryTable).where(eq(quizHistoryTable.userEmail, userEmail));
         await db.delete(userPdfsTable).where(eq(userPdfsTable.userEmail, userEmail));
 
-        // 5. Delete courses created by this user
-        await db.delete(coursesTable).where(eq(coursesTable.userEmail, userEmail));
-
-        // 6. Finally delete the user
+        // 3. Finally delete the user
         const deletedUser = await db.delete(usersTable).where(eq(usersTable.id, id)).returning();
 
-        res.json({ message: "Account deleted successfully", user: deletedUser[0] });
+        res.json({ message: "Account deleted successfully. Courses you created remain available for others.", user: deletedUser[0] });
     } catch (error) {
         console.error("Error deleting user account:", error);
         res.status(500).json({
