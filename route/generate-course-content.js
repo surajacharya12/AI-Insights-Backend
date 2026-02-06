@@ -164,7 +164,7 @@ Response Rules (MANDATORY)
    - **Use Case**: When to use it
    - **Mechanism**: How it works behind the scenes
    - **Benefit / Warning / Issue**: Critical notes (e.g., dummy variable trap, data leakage)
-   - **Code Implementation**: Clean, functional Python/JS code with comments
+   - **Code Implementation**: Clean, functional Python/JS code with comments and output opf that code
    - **Expected Output**: Show the result of the code as a comment
 
 4. Explain step-by-step
