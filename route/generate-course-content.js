@@ -158,7 +158,9 @@ Response Rules (MANDATORY)
    - Then explain it again in technical and simple professional terms
 
 3. For technical strategies or techniques (e.g., Encoding), use this sub-structure:
-  - **Type**:Type of the topic and explain each type with example 
+  - Explain the concept in simple language
+   - Then explain it again in technical and simple professional terms
+  - **Type**:Type of that topic and explain each type with example 
    - **Use Case**: When to use it
    - **Mechanism**: How it works behind the scenes
    - **Benefit / Warning / Issue**: Critical notes (e.g., dummy variable trap, data leakage)
